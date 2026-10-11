@@ -258,9 +258,8 @@ def refresh_pool(pack, pool, max_per_run=8):
         lane = pack.get("stats", {}).get(role, {})
         if n >= max_per_run or now - done_at.get(tag, 0) < 3 * 86400 or cid not in lane:
             continue
-        other = next((c for c in lane if c != cid), None)
         try:
-            table = opgg.matchup_table(pack["champions"][cid], role, pack["champions"][other], key_to_id)
+            table = opgg.matchup_table(pack["champions"][cid], role, opgg.safe_opponent(lane, pack["champions"], cid), key_to_id)
             pack.setdefault("matchups", {}).setdefault(role, {})[cid] = table
             done_at[tag] = int(now)
             n += 1

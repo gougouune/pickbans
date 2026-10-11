@@ -32,12 +32,22 @@ def call(tool, args, timeout=60):
 
 def api_name(champ):
     """'Renata Glasc' -> RENATA_GLASC, "Vel'Koz" -> VEL_KOZ (OP.GG wants UPPER_SNAKE_CASE)."""
-    return re.sub(r"[^A-Z0-9]+", "_", champ["name"].upper()).strip("_")
+    name = champ["name"].upper().replace("'", "").replace(".", "")  # Cho'Gath -> CHOGATH, Dr. Mundo -> DR_MUNDO
+    return re.sub(r"[^A-Z0-9]+", "_", name).strip("_")
+
+
+def safe_opponent(lane_ids, champions, not_this):
+    """Any lane champion with a plain one-word name: the matchup-guide call needs a valid opponent name."""
+    for cid in lane_ids:
+        if cid != not_this and champions[cid]["name"].isalpha():
+            return champions[cid]
+    return champions[next(c for c in lane_ids if c != not_this)]
 
 
 def name_variants(champ):
     seen = []
-    for v in (api_name(champ), re.sub(r"[^A-Z0-9]", "", champ["name"].upper()), champ["id"].upper(),
+    for v in (api_name(champ), re.sub(r"[^A-Z0-9]+", "_", champ["name"].upper()).strip("_"),
+              re.sub(r"[^A-Z0-9]", "", champ["name"].upper()), champ["id"].upper(),
               re.sub(r"(?<=[a-z])(?=[A-Z])", "_", champ["id"]).upper()):
         if v not in seen:
             seen.append(v)

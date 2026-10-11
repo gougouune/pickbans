@@ -24,6 +24,7 @@ by_name.update({norm(cid): cid for cid in roster})
 key_to_id = {c["key"]: cid for cid, c in roster.items()}
 
 old = {}
+FILL_ONLY = False
 if os.path.exists(OUT) and "--fresh" not in sys.argv:
     with open(OUT, encoding="utf-8") as f:
         old = json.load(f)
@@ -34,15 +35,18 @@ if os.path.exists(OUT) and "--fresh" not in sys.argv:
 if "--max-age-days" in sys.argv and old:
     days = float(sys.argv[sys.argv.index("--max-age-days") + 1])
     age = (time.time() - old.get("fetched_at", 0)) / 86400
-    complete = sum(len(v) for v in old.get("matchups", {}).values()) >= 250
-    if age < days and complete:
+    missing = [(r, c) for r, lane in old.get("meta", {}).items() for c in lane if c not in old.get("matchups", {}).get(r, {})]
+    if age < days and not missing:
         print(f"Stats are {age:.1f} days old (< {days}) for patch {version}: nothing to do")
         sys.exit(0)
     if age >= days:
         old = {}
+    else:
+        FILL_ONLY = True  # same patch, recent: keep tiers as they are, just fetch the missing tables
 
 print(f"Patch {version}: lane tiers…")
-meta = opgg.lane_meta(lambda n: by_name.get(norm(n)))
+meta = old["meta"] if FILL_ONLY else opgg.lane_meta(lambda n: by_name.get(norm(n)))
+fetched_at = old["fetched_at"] if FILL_ONLY else int(time.time())
 matchups = old.get("matchups", {})
 jobs = [(role, cid) for role, champs in meta.items() for cid in champs if cid not in matchups.get(role, {})]
 print(f"{sum(len(v) for v in meta.values())} champion/lane combos, {len(jobs)} matchup tables to fetch")
@@ -50,9 +54,8 @@ print(f"{sum(len(v) for v in meta.values())} champion/lane combos, {len(jobs)} m
 
 def fetch(job):
     role, cid = job
-    other = next(c for c in meta[role] if c != cid)
     try:
-        return role, cid, opgg.matchup_table(roster[cid], role, roster[other], key_to_id)
+        return role, cid, opgg.matchup_table(roster[cid], role, opgg.safe_opponent(meta[role], roster, cid), key_to_id)
     except Exception as e:
         return role, cid, e
 
@@ -69,10 +72,10 @@ with ThreadPoolExecutor(3) as pool:
         if done % 25 == 0 or done == len(jobs):
             print(f"  {done}/{len(jobs)}")
             with open(OUT, "w", encoding="utf-8") as f:
-                json.dump({"version": version, "fetched_at": int(time.time()), "source": "op.gg",
+                json.dump({"version": version, "fetched_at": fetched_at, "source": "op.gg",
                            "meta": meta, "matchups": matchups}, f)
 
 with open(OUT, "w", encoding="utf-8") as f:
-    json.dump({"version": version, "fetched_at": int(time.time()), "source": "op.gg", "meta": meta, "matchups": matchups}, f)
+    json.dump({"version": version, "fetched_at": fetched_at, "source": "op.gg", "meta": meta, "matchups": matchups}, f)
 pairs = sum(len(t) for r in matchups.values() for t in r.values())
 print(f"Saved {OUT}: {pairs} matchup pairs, {failed} failed")
