@@ -1,0 +1,70 @@
+# Id | weak_vs (champs that beat it in lane) | play: how to play it | vs: how to lane against it | watch: team-level surprise (optional)
+Aatrox | Fiora,Irelia,Vayne,Quinn | play: Hit the edges of your Q (sweet spots). Your ult makes you heal a lot, fight inside it. | vs: Step toward him or sideways when he Qs — the sweet spot is at the tip. Buy anti-heal. | watch: Aatrox ult = huge healing and revive-like fights. Anti-heal matters.
+Ahri | Kassadin,Fizz,Yasuo,Galio | play: Land your charm (E) then burst. Your ult has 3 dashes: use it to engage OR escape, not both. | vs: Stay behind minions to block her charm. She is weak when her ult is down. | watch: Ahri roams with ult — she can pick off side lanes out of nowhere.
+Akali | Galio,Renekton,Malzahar,Vex | play: Poke with Q, fight inside your smoke (W). Wait for level 6 to go all-in. | vs: Control wards / sweepers reveal her in smoke. Play safe after 6, she can dive you. | watch: Akali is invisible in her shroud and dives backline with 2 dashes.
+Akshan | Malzahar,Galio,Pantheon | play: Poke with your double auto, swing with E around walls. Killing the guy who killed your ally revives them. | vs: Stay out of vision, trade when his E is down. | watch: If Akshan kills the enemy who killed his ally, that ally REVIVES.
+Alistar | Janna,Morgana,Senna | play: W (headbutt) then Q (knockup) is your combo. Your ult lets you tank everything, dive in. | vs: Keep distance, he needs to get close for W+Q. | watch: Alistar engages from far with W+Q combo and is very hard to kill with ult on.
+Ambessa | Vayne,Quinn,Kennen | play: Chain your abilities to dash between them. Ult to lock the backline carry. | vs: Short trades when her dashes are on cooldown. | watch: Ambessa ult blinks to the FARTHEST enemy in a line and suppresses them.
+Amumu | Morgana,Olaf,Nidalee | play: Land Q (bandage) then ult in the middle of 3+ enemies. | vs: Stay spread out in fights so his ult doesn't hit everyone. | watch: Amumu ult stuns the whole team if you're grouped — spread out.
+Anivia | Fizz,Zed,Kassadin,Yasuo | play: Your egg revives you. Use your wall to split fights and block escapes. | vs: All-in her before 6 and when her egg is down. | watch: Anivia wall can block your escape path in fights.
+Annie | Syndra,Xerath,Lux | play: Every 4th spell stuns. Hold the stun, flash + ult for a big engage. | vs: Watch her stun counter (the white swirl around her). Stay away when it's ready. | watch: Annie can flash-ult a whole team with a stun. Stay spread.
+Aphelios | Draven,Lucian,Caitlyn | play: Weak early, you scale hard. Learn which 2 guns you hold. | vs: Punish him early, he has no escape. | watch: Aphelios becomes a monster late with Crescendum. End early.
+Ashe | Draven,Lucian,Caitlyn | play: Slow them with your autos, ult (arrow) catches people from across the map. | vs: Dodge her long-range arrow ult. Fight her up close. | watch: Ashe arrow ult can stun you from off-screen. Her E reveals your jungle.
+AurelionSol | Fizz,Kassadin,Zed,Yasuo | play: Farm and stack. You're weak early, huge late. | vs: Punish him hard before 6 — he is slow and fragile. | watch: Aurelion Sol late game = constant AoE damage. Don't let the game go long.
+Aurora | Malzahar,Galio,Vex | play: Hop around with W and your ult zone. Poke with Q. | vs: Hard CC catches her when her W is down. | watch: Aurora ult zone lets her teleport around — fights inside it favor her.
+Azir | Fizz,Zed,Kassadin,Leblanc | play: Soldiers do the damage, stay far back. Ult pushes enemies away (or into your team). | vs: Dive him — he's weak and slow if caught. | watch: Azir ult (shuffle) throws your carry into his team.
+Bard | Leona,Nautilus,Blitzcrank | play: Roam and collect chimes. Q stuns if it hits 2 targets or a wall. | vs: He leaves lane a lot — push and punish his ADC alone. | watch: Bard ult freezes everything (including your team) — don't panic, wait it out.
+Belveth | Warwick,Jax,Poppy | play: Farm and scale. Take void coral from epic monsters. | vs: Invade and fight her early. | watch: Bel'Veth snowballs off objectives — contest Rift Herald / Baron.
+Blitzcrank | Morgana,Braum,Alistar | play: Hide in bush, pull the enemy carry (Q) into your team. | vs: Stay behind minions. Never face-check bushes. | watch: Blitzcrank hook from a bush = instant death for squishies. Walk behind minions.
+Brand | Xerath,Lux,Zyra | play: Land 3 spells to trigger the burn explosion. Great in teamfights. | vs: He's immobile and fragile — engage on him. | watch: Brand melts tanks with % health burn.
+Braum | Morgana,Janna,Lulu | play: Stand in front of your ADC, block with E (shield). 4 hits = stun. | vs: Don't walk into his 4th stun stack. | watch: Braum shield (E) blocks projectiles — spells like Ashe arrow won't pass.
+Briar | Jax,Warwick,Poppy | play: W goes berserk — you can't control it well. Dive, heal, repeat. | vs: CC her when she's berserk, she can't escape. | watch: Briar is healthy early — her ganks come fast at level 3.
+Caitlyn | Draven,Lucian,Samira | play: Poke with long range and traps. Headshot every few autos. | vs: Get close, she hates being dived. Don't stand on her traps. | watch: Caitlyn ult snipes low HP targets from far.
+Camille | Jax,Renekton,Poppy | play: Hookshot (E) off walls to engage. Ult locks one target. | vs: Stand away from walls and trade when her E is down. | watch: Camille ult isolates a carry — nobody else can help them.
+Cassiopeia | Fizz,Kassadin,Yasuo | play: E spam is your damage. Face enemies with ult to stun. | vs: Look AWAY from her ult (turn your camera/movement) to not get stunned. | watch: Cassiopeia ult stuns if you're facing her. Walk away from her, not toward.
+Chogath | Fiora,Vayne,Gwen | play: Eat (ult) to get bigger. Q is your knockup. | vs: Poke him, he lacks escape. | watch: Cho'Gath ult is true damage execute on low HP targets.
+Corki | Zed,Kassadin,Fizz | play: Poke with rockets. Pick the package every few minutes. | vs: All-in him when his W (dash) is down. | watch: Corki package lets him fly into your backline.
+Darius | Vayne,Quinn,Gnar | play: Stack 5 bleeds and ult to reset. Hit the edge of your Q to heal. | vs: DO NOT fight him at 5 stacks. Poke him from range. | watch: Darius ult resets on kills — he can pentakill if your team is low.
+Diana | Kassadin,Fizz,Galio | play: Q then R for a big AoE engage. | vs: Stay spread out to limit her ult pull. | watch: Diana ult pulls everyone nearby — group less.
+DrMundo | Fiora,Vayne,Gwen | play: Farm with Q cleaver, you're a tank that heals tons. | vs: Buy anti-heal. Poke him before he gets big. | watch: Dr. Mundo ult heals him massively — anti-heal is a must.
+Draven | Caitlyn,Varus,Jhin | play: Catch your spinning axes. You're strongest early. | vs: Play safe early, he's a lane bully. Make him fall off. | watch: Draven can snowball fast — deny his early kills.
+Ekko | Kassadin,Galio,Malzahar | play: Your ult rewinds you — engage, burst, ult back. | vs: Burst him before he can ult. | watch: Ekko ult rewinds him to safety with heal — kill him fast or not at all.
+Elise | Warwick,Olaf,Poppy | play: Gank early with cocoon (E) stun. | vs: Ward early, she's a strong early ganker. | watch: Elise ganks early and often. Ward your river at level 3.
+Evelynn | Rengar,Nocturne,Poppy | play: Invisible from level 6. Charm then burst. | vs: Control wards reveal her. Play near your team after 6. | watch: Evelynn is invisible from level 6 — carry a control ward.
+Ezreal | Caitlyn,Draven,Lucian | play: Land your Q poke, E (blink) is your escape. | vs: All-in when his E (blink) is down. | watch: Ezreal ult is a global beam — careful when low.
+Fiddlesticks | Morgana,Olaf,Rengar | play: Hide in fog, ult into their team from brush. | vs: Ward the bushes near fights. | watch: Fiddlesticks ult from a bush wipes teams. Ward around objectives.
+Fiora | Poppy,Malphite,Jax | play: Hit the vitals (the small X marks) to heal and win duels. | vs: Poppy/Jax/Malphite. Never duel her late. | watch: Fiora ult heals her team if she hits 4 vitals. She'll split push.
+Fizz | Galio,Malzahar,Vex | play: E (hop) dodges everything. Fish ult then all-in. | vs: Save your burst for after his E hop. | watch: Fizz shark ult bursts carries — his E dodges your skillshots.
+Galio | Kassadin,Vladimir,Cassiopeia | play: Tank magic damage, taunt with E, ult to join any fight. | vs: Push his wave so he can't roam. | watch: Galio ult flies him to any teammate's fight across the map.
+Gangplank | Irelia,Riven,Camille | play: Barrel combos. Your ult is global. | vs: Go aggressive early, he's weak before items. | watch: Gangplank ult hits anywhere on the map.
+Garen | Vayne,Quinn,Teemo | play: Q then spin (E). Ult executes low HP targets. | vs: Poke him, don't let him spin on you. | watch: Garen ult is true damage execute.
+Gnar | Irelia,Riven,Jax | play: Mini form is poke, Mega form stuns. Plan fights for Mega Gnar. | vs: Fight him when he's small. | watch: Mega Gnar ult throws you into walls — stay out of walls when he's big.
+Gragas | Olaf,Rengar,Warwick | play: Body slam (E) to stun, ult to push enemies. | vs: Dodge his E and stay out of barrel range. | watch: Gragas ult can push your carry into his team.
+Graves | Kindred,Rengar,Elise | play: Short-range shotgun. Clear fast and invade. | vs: Fight him when he's reloading. | watch: Graves takes your jungle camps — ward your jungle.
+Gwen | Vayne,Quinn,Kennen | play: Stand in W mist to block ranged hits. Scale up. | vs: Walk into her mist to hit her. Short trades. | watch: Gwen mist makes her untargetable from outside — walk in.
+Hecarim | Poppy,Warwick,Olaf | play: Run fast, charge (E) knocks back. Ult fears. | vs: Hard CC stops him. Ward river. | watch: Hecarim runs in super fast from fog — ward the sides of fights.
+Heimerdinger | Fizz,Kassadin,Zed | play: Turrets on your lane. Siege and poke. | vs: Dive him when turrets are down. | watch: Heimerdinger turrets make fighting near him painful.
+Hwei | Fizz,Zed,Kassadin | play: 10 spells. Poke from max range, CC with the E line. | vs: He's immobile — all-in him. | watch: Hwei can poke and control fights from very far.
+Illaoi | Vayne,Quinn,Fiora | play: Fight near your tentacles. Hit spirit with E. | vs: Dodge her E (spirit grab). Never fight her during ult. | watch: Illaoi ult = don't fight her in that area, walk away.
+Irelia | Poppy,Renekton,Malphite | play: Stack passive, Q resets on marked targets. | vs: Fight her when passive is down. | watch: Irelia jumps from minion to minion in fights — hard to escape.
+Ivern | Rengar,Olaf,Nunu | play: Free jungle, shield carries. | vs: Invade him — he's weak. | watch: Ivern shields/root pick off anyone.
+Janna | Blitzcrank,Nautilus,Leona | play: Disengage. Tornado + knockback. Ult pushes enemies away and heals. | vs: Engage when her ult/knockback is down. | watch: Janna ult cancels your engage by knocking everyone back.
+JarvanIV | Olaf,Poppy,Rengar | play: E (flag) + Q = knockup combo. Ult traps. | vs: Keep away from his flag. | watch: Jarvan ult traps your team in a ring — Flash out.
+Jax | Poppy,Malphite,Illaoi | play: E (counter-strike) blocks autos. Scale up. | vs: Poppy/Malphite. Don't auto during his E. | watch: Jax split pushes hard late.
+Jayce | Irelia,Riven,Olaf | play: Poke with Q through E gate. | vs: All-in him, he's weak without poke. | watch: Jayce poke can shred your team before fights.
+Jhin | Caitlyn,Draven,Samira | play: 4 shots, 4th crits. W roots slowed targets. | vs: Get close. He's slow. | watch: Jhin ult snipes from far away.
+Jinx | Draven,Caitlyn,Lucian | play: Stay back. Rocket + minigun swap. Resets on kills. | vs: Dive her — she has no escape. | watch: Jinx ult is global execute. Late game she deletes teams.
+KSante | Vayne,Quinn,Fiora | play: Tank or all-in (ult). Complex. | vs: Shred with % HP damage. | watch: K'Sante ult throws your carry out of the fight.
+Kaisa | Caitlyn,Draven,Lucian | play: Evolve abilities at item points. Ult dashes to marked target. | vs: CC her when she jumps in. | watch: Kai'Sa ult dives your backline — keep peel.
+Kalista | Draven,Caitlyn,Lucian | play: Hop after each attack. Ult saves your support. | vs: Slow her. Fight when her ult is down. | watch: Kalista ult throws her support into your team.
+Karma | Xerath,Lux,Brand | play: Poke with empowered Q. Shield (E) your team. | vs: She falls off late. | watch: Karma speed-shield can make her team engage fast.
+Karthus | Rengar,Olaf,Kha'Zix | play: Farm, you're strong late. Ult hits the whole map. | vs: Invade early — he's slow. | watch: Karthus ult hits EVERYONE on the map. Stay above 30% HP.
+Kassadin | Talon,Zed,Pantheon | play: Survive early. Level 16 = monster. | vs: Kill him early — he's super weak before 6. | watch: Kassadin late game teleports onto your carry every few seconds.
+Katarina | Galio,Malzahar,Lissandra | play: Pick up daggers. Resets on kills. | vs: Save stun for her ult. | watch: Katarina ult spins — CC her immediately to stop it.
+Kayle | Irelia,Riven,Darius | play: Weak until level 11/16. Farm safe. | vs: Kill her early before she scales. | watch: Kayle ult makes an ally invulnerable.
+Kayn | Poppy,Warwick,Olaf | play: Pick red (Rhaast) or blue (Shadow Assassin) form. | vs: Invade before he transforms. | watch: Kayn goes through walls. Ward your jungle entrances.
+Kennen | Irelia,Riven,Renekton | play: 3 stacks stun. Ult in their team. | vs: Dodge his Q, fight him with sustain. | watch: Kennen flash ult stuns the whole team.
+Khazix | Rengar,Poppy,Warwick | play: Isolate targets, jump from bush. | vs: Stay near allies. | watch: Kha'Zix kills isolated targets — never walk alone.
+Kindred | Rengar,Kha'Zix,Olaf | play: Stack marks. Ult prevents death. | vs: Invade her. | watch: Kindred ult stops anyone from dying — wait it out.
+Kled | Teemo,Vayne,Quinn | play: Rider/mount. Ult charges across the map. | vs: Poke him off mount. | watch: Kled ult charges across the map to start a fight.
+KogMaw | Draven,Caitlyn,Lucian | play: Stay behind tanks. W shreds everything. | vs: Dive him. | watch: Kog'Maw with peel melts tanks — focus him first.

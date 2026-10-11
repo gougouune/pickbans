@@ -1,0 +1,177 @@
+# PICKBANS knowledge base — champion traits
+# Id | positions (main first) | damage AD/AP/MIX | range M/R | playstyles (main first) | traits | scaling E/M/L | difficulty 1-3
+# Trait codes (1-3): EN engage, PE peel, CC crowd control, PO poke, DI dive, FR frontline, SU heals/shields for allies,
+#   BU burst, DP sustained damage, TS tank shred, WC waveclear, MO mobility, SP split push, GL global/map pressure, PI pick/catch
+Aatrox | TOP | AD | M | Juggernaut,Bruiser | FR2 DI1 CC2 DP2 WC2 SP1 | M | 2
+Ahri | MIDDLE | AP | R | Burst mage,Assassin | PI2 CC1 BU2 MO3 WC2 PO1 | M | 2
+Akali | MIDDLE,TOP | AP | M | Assassin | BU3 MO3 DI3 SP1 | M | 3
+Akshan | MIDDLE,TOP | AD | R | Skirmisher,Marksman | BU2 MO2 SP2 GL1 | M | 2
+Alistar | UTILITY | AP | M | Engage tank | EN3 PE3 CC3 FR3 SU1 | E | 1
+Ambessa | TOP,JUNGLE | AD | M | Bruiser,Skirmisher | DI3 MO3 CC1 BU2 SP1 | M | 3
+Amumu | JUNGLE,UTILITY | AP | M | Engage tank | EN3 CC3 FR3 DP1 TS1 | M | 1
+Anivia | MIDDLE | AP | R | Control mage | CC3 PE2 WC3 DP2 PO1 | L | 3
+Annie | MIDDLE,UTILITY | AP | R | Burst mage | BU3 CC2 EN2 WC2 | M | 1
+Aphelios | BOTTOM | AD | R | Marksman,Hypercarry | DP3 WC2 PE1 | L | 3
+Ashe | BOTTOM,UTILITY | AD | R | Marksman,Utility | CC3 PI2 PO1 DP2 EN2 GL1 | M | 1
+AurelionSol | MIDDLE | AP | R | Battle mage,Scaling mage | DP3 WC3 CC1 PO1 | L | 2
+Aurora | MIDDLE,TOP | AP | R | Burst mage,Assassin | BU2 MO3 CC1 WC2 SP1 | M | 2
+Azir | MIDDLE | AP | R | Control mage | DP3 PE2 CC2 PO1 WC3 | L | 3
+Bard | UTILITY | AP | R | Catcher,Roamer | PI2 CC2 SU1 MO2 GL2 PO1 | M | 3
+Belveth | JUNGLE | AD | M | Skirmisher | DP3 MO2 SP1 TS2 | L | 2
+Blitzcrank | UTILITY | AP | M | Catcher,Tank | PI3 CC3 EN2 FR1 | E | 1
+Brand | UTILITY,MIDDLE | AP | R | Burst mage,Poke mage | DP3 PO2 WC3 TS3 CC1 | M | 1
+Braum | UTILITY | AD | M | Warden,Tank | PE3 FR2 CC3 SU1 | E | 1
+Briar | JUNGLE | AD | M | Diver,Skirmisher | DI3 DP2 CC1 | E | 2
+Caitlyn | BOTTOM | AD | R | Marksman,Lane bully | PO2 DP2 WC2 CC1 PE1 | M | 2
+Camille | TOP | AD | M | Diver,Split pusher | DI3 SP3 PI2 CC2 TS2 MO2 | M | 3
+Cassiopeia | MIDDLE,TOP | AP | R | Battle mage | DP3 CC2 WC2 | L | 3
+Chogath | TOP,MIDDLE | AP | M | Tank,Burst tank | FR3 CC2 BU2 WC2 TS2 | L | 1
+Corki | MIDDLE | MIX | R | Poke,Marksman | PO3 DP2 WC2 | M | 2
+Darius | TOP | AD | M | Juggernaut | FR2 DP3 TS2 CC1 | E | 1
+Diana | JUNGLE,MIDDLE | AP | M | Diver,Burst assassin | EN2 DI3 BU3 WC2 CC2 | M | 2
+DrMundo | TOP,JUNGLE | AD | M | Tank,Juggernaut | FR3 TS2 DP2 SP1 | L | 1
+Draven | BOTTOM | AD | R | Marksman,Lane bully | DP3 BU2 | E | 3
+Ekko | JUNGLE,MIDDLE | AP | M | Assassin,AP diver | BU3 MO2 DI2 CC1 | M | 3
+Elise | JUNGLE | AP | R | Assassin,Early ganker | BU2 PI2 CC1 TS2 | E | 3
+Evelynn | JUNGLE | AP | M | Assassin | BU3 PI2 MO1 | M | 2
+Ezreal | BOTTOM | AD | R | Poke,Marksman | PO3 MO2 BU1 | M | 2
+Fiddlesticks | JUNGLE | AP | R | Engage mage | EN3 CC2 DP2 WC2 | M | 2
+Fiora | TOP | AD | M | Split pusher,Duelist | SP3 DP3 TS3 MO2 | L | 3
+Fizz | MIDDLE | AP | M | Assassin | BU3 MO3 DI2 | M | 2
+Galio | MIDDLE,UTILITY | AP | M | Tank mage,Engage | EN3 CC3 FR2 GL2 PE2 | M | 2
+Gangplank | TOP | AD | M | Scaling carry | PO2 WC3 BU2 GL2 | L | 3
+Garen | TOP | AD | M | Juggernaut | FR2 BU2 SP2 | E | 1
+Gnar | TOP | AD | R | Tank,Skirmisher | FR2 EN2 CC3 PO1 | M | 3
+Gragas | JUNGLE,TOP,MIDDLE | AP | M | Tank,Burst mage | EN2 PE2 CC3 FR2 BU2 | M | 2
+Graves | JUNGLE | AD | R | Skirmisher | DP3 BU2 MO1 | M | 2
+Gwen | TOP,JUNGLE | AP | M | Skirmisher,Duelist | DP3 TS3 SP2 | L | 2
+Hecarim | JUNGLE | AD | M | Diver,Bruiser | EN3 DI3 MO3 CC2 FR1 | M | 1
+Heimerdinger | MIDDLE,UTILITY,TOP | AP | R | Poke mage,Specialist | PO2 WC3 CC1 PE1 | M | 2
+Hwei | MIDDLE,UTILITY | AP | R | Artillery mage,Control mage | PO3 CC2 WC3 PE1 | M | 3
+Illaoi | TOP | AD | M | Juggernaut | FR2 DP3 SP2 | M | 2
+Irelia | TOP,MIDDLE | AD | M | Diver,Skirmisher | DI3 MO3 DP3 CC1 | M | 3
+Ivern | JUNGLE | AP | M | Enchanter | SU3 PE2 CC2 | M | 2
+Janna | UTILITY | AP | R | Enchanter,Disengage | PE3 SU2 CC2 | M | 1
+JarvanIV | JUNGLE | AD | M | Diver,Engage | EN3 DI2 CC3 BU2 | E | 2
+Jax | TOP,JUNGLE | MIX | M | Split pusher,Skirmisher | SP3 DP3 DI2 CC1 | L | 2
+Jayce | TOP,MIDDLE | AD | R | Poke,Lane bully | PO3 BU2 WC2 | E | 3
+Jhin | BOTTOM | AD | R | Marksman,Utility | PO2 BU2 CC1 PI1 | M | 2
+Jinx | BOTTOM | AD | R | Marksman,Hypercarry | DP3 WC3 PO1 | L | 1
+KSante | TOP | AD | M | Tank,Skirmisher | FR3 CC2 PE2 EN1 | M | 3
+Kaisa | BOTTOM | MIX | R | Marksman,Diver | DI2 BU2 DP2 MO1 | L | 2
+Kalista | BOTTOM | AD | R | Marksman,Skirmisher | DP2 MO2 EN2 PE1 | E | 3
+Karma | UTILITY,MIDDLE | AP | R | Enchanter,Poke | PO2 SU2 PE2 MO1 | E | 2
+Karthus | JUNGLE,MIDDLE | AP | R | Scaling mage | DP3 WC3 GL2 | L | 2
+Kassadin | MIDDLE | AP | M | Assassin,Scaling | BU3 MO3 DI2 | L | 2
+Katarina | MIDDLE | AP | M | Assassin,Reset | BU3 MO3 DP2 | M | 3
+Kayle | TOP | MIX | R | Hypercarry | DP3 WC3 SU1 | L | 1
+Kayn | JUNGLE | AD | M | Assassin,Bruiser | DI3 BU2 MO2 | M | 2
+Kennen | TOP,MIDDLE | AP | R | Engage mage | EN3 CC3 BU2 | M | 2
+Khazix | JUNGLE | AD | M | Assassin | BU3 PI2 MO2 | M | 2
+Kindred | JUNGLE | AD | R | Marksman jungler | DP3 PE2 | L | 3
+Kled | TOP | AD | M | Diver,Engage | EN3 DI2 BU2 | E | 2
+KogMaw | BOTTOM | MIX | R | Hypercarry | DP3 TS3 PO1 | L | 1
+Leblanc | MIDDLE | AP | R | Assassin,Burst mage | BU3 MO3 PI2 | M | 3
+LeeSin | JUNGLE | AD | M | Diver,Skirmisher | DI3 MO3 BU2 CC1 PI1 | E | 3
+Leona | UTILITY | AP | M | Engage tank | EN3 CC3 FR3 | E | 1
+Lillia | JUNGLE | AP | M | Skirmisher mage | DP2 MO2 CC3 WC2 | M | 2
+Lissandra | MIDDLE | AP | R | Control mage,Engage | CC3 EN2 PE2 BU2 | M | 2
+Locke | JUNGLE,MIDDLE | AD | M | Assassin | BU3 DI2 MO2 TS1 | M | 2
+Lucian | BOTTOM,MIDDLE | AD | R | Marksman,Lane bully | BU2 MO2 DP2 | E | 2
+Lulu | UTILITY | AP | R | Enchanter | SU3 PE3 CC2 | M | 1
+Lux | UTILITY,MIDDLE | AP | R | Poke mage,Burst mage | PO3 CC2 BU2 SU1 PI2 | M | 1
+Malphite | TOP,UTILITY,MIDDLE | AP | M | Engage tank,Burst | EN3 FR3 CC3 BU2 | M | 1
+Malzahar | MIDDLE | AP | R | Control mage | CC2 PI2 WC3 DP2 | M | 1
+Maokai | UTILITY,JUNGLE,TOP | AP | M | Engage tank | EN3 CC3 FR3 PE2 | M | 1
+MasterYi | JUNGLE | AD | M | Hypercarry,Skirmisher | DP3 TS3 MO1 | L | 1
+Mel | MIDDLE,UTILITY | AP | R | Poke mage,Burst mage | PO3 BU2 CC1 PE1 WC2 | M | 2
+Milio | UTILITY | AP | R | Enchanter | SU3 PE2 | M | 1
+MissFortune | BOTTOM | AD | R | Marksman,Burst | BU3 WC3 PO1 | M | 1
+MonkeyKing | TOP,JUNGLE | AD | M | Diver,Engage | EN3 DI3 CC3 BU2 | M | 2
+Mordekaiser | TOP | AP | M | Juggernaut | FR2 DP3 TS2 | M | 1
+Morgana | UTILITY,MIDDLE,JUNGLE | AP | R | Catcher,Anti-engage | PI3 CC3 PE3 SU1 | M | 1
+Naafiri | MIDDLE | AD | M | Assassin | BU3 MO2 DI2 | E | 1
+Nami | UTILITY | AP | R | Enchanter | SU2 CC3 PE2 PO1 | M | 1
+Nasus | TOP | AD | M | Juggernaut,Split pusher | FR2 SP3 TS1 | L | 1
+Nautilus | UTILITY | AP | M | Engage tank,Catcher | EN3 CC3 PI3 FR3 | E | 1
+Neeko | MIDDLE,UTILITY | AP | R | Burst mage,Engage | EN2 CC3 BU2 WC2 | M | 2
+Nidalee | JUNGLE | AP | R | Poke,Assassin | PO3 BU2 MO2 SU1 | E | 3
+Nilah | BOTTOM | AD | M | Skirmisher,Marksman | DP3 SU1 MO1 | L | 2
+Nocturne | JUNGLE | AD | M | Diver | DI3 GL3 BU2 CC1 | M | 1
+Nunu | JUNGLE | AP | M | Tank,Ganker | EN2 FR2 CC2 GL1 | M | 1
+Olaf | JUNGLE,TOP | AD | M | Diver,Juggernaut | DI3 DP3 TS2 | E | 1
+Orianna | MIDDLE | AP | R | Control mage | CC3 SU2 PO2 WC3 PE2 | M | 2
+Ornn | TOP | MIX | M | Engage tank | EN3 FR3 CC3 | L | 2
+Pantheon | UTILITY,MIDDLE,TOP,JUNGLE | AD | M | Diver,Lane bully | BU3 DI2 CC1 GL2 | E | 2
+Poppy | JUNGLE,TOP,UTILITY | AD | M | Tank,Anti-dive | FR3 PE3 CC3 EN1 | M | 2
+Pyke | UTILITY | AD | M | Catcher,Assassin | PI3 CC2 BU3 MO2 | M | 3
+Qiyana | MIDDLE,JUNGLE | AD | M | Assassin,Engage | BU3 CC2 MO2 EN2 | M | 3
+Quinn | TOP | AD | R | Skirmisher,Roamer | MO3 GL2 BU2 SP2 | M | 2
+Rakan | UTILITY | AP | M | Engage,Enchanter | EN3 CC3 SU1 MO3 PE1 | M | 2
+Rammus | JUNGLE | AP | M | Tank,Engage | EN3 FR3 CC3 | M | 1
+RekSai | JUNGLE | AD | M | Diver,Early ganker | DI2 CC2 BU2 GL1 | E | 2
+Rell | UTILITY | AP | M | Engage tank | EN3 CC3 FR3 | M | 2
+Renata | UTILITY | AP | R | Enchanter,Anti-engage | SU2 PE2 CC2 | M | 2
+Renekton | TOP | AD | M | Diver,Lane bully | DI2 BU2 FR2 CC1 | E | 1
+Rengar | JUNGLE,TOP | AD | M | Assassin | BU3 PI3 DI2 | M | 3
+Riven | TOP | AD | M | Skirmisher | BU3 MO3 CC2 DI2 | M | 3
+Rumble | TOP,MIDDLE | AP | M | Battle mage | DP3 CC1 WC2 | M | 2
+Ryze | MIDDLE,TOP | AP | R | Battle mage | DP3 WC2 GL1 | L | 3
+Samira | BOTTOM | AD | R | Marksman,Diver | DI2 BU3 MO2 | M | 3
+Sejuani | JUNGLE | AP | M | Engage tank | EN3 CC3 FR3 | M | 1
+Senna | UTILITY,BOTTOM | AD | R | Marksman support | PO3 SU2 GL2 DP2 | L | 2
+Seraphine | UTILITY,BOTTOM,MIDDLE | AP | R | Enchanter,Artillery mage | SU2 CC2 PO2 WC2 EN1 | M | 1
+Sett | TOP,UTILITY | AD | M | Juggernaut,Engage | FR2 EN2 CC2 BU2 | E | 1
+Shaco | JUNGLE,UTILITY | MIX | M | Assassin,Trickster | BU2 PI2 MO2 | E | 3
+Shen | TOP | MIX | M | Tank,Split pusher | FR2 PE3 GL3 SP2 CC1 SU2 | M | 2
+Shyvana | JUNGLE,TOP | MIX | M | Bruiser,AP burst | FR2 DP2 WC2 EN1 | M | 1
+Singed | TOP | AP | M | Tank,Specialist | FR2 SP2 CC1 PE1 | M | 2
+Sion | TOP | AD | M | Engage tank | EN3 FR3 CC2 WC2 | M | 2
+Sivir | BOTTOM | AD | R | Marksman,Waveclear | WC3 DP2 EN2 | M | 1
+Skarner | JUNGLE,TOP | AP | M | Tank,Catcher | EN3 PI3 CC3 FR3 | M | 1
+Smolder | BOTTOM,MIDDLE | AD | R | Scaling marksman | PO2 WC3 DP2 | L | 1
+Sona | UTILITY | AP | R | Enchanter | SU3 CC2 PO1 | L | 1
+Soraka | UTILITY | AP | R | Enchanter,Healer | SU3 PE1 GL1 | M | 1
+Swain | UTILITY,MIDDLE,BOTTOM | AP | R | Battle mage | FR2 DP2 CC2 PE1 | M | 1
+Sylas | MIDDLE,JUNGLE | AP | M | Burst mage,Diver | DI2 BU2 CC1 | M | 3
+Syndra | MIDDLE | AP | R | Burst mage | BU3 CC2 PO1 PI2 | M | 2
+TahmKench | TOP,UTILITY | AP | M | Tank,Warden | FR3 PE3 CC2 | M | 2
+Taliyah | JUNGLE,MIDDLE | AP | R | Burst mage,Roamer | WC3 CC2 GL2 BU2 | M | 2
+Talon | MIDDLE,JUNGLE | AD | M | Assassin,Roamer | BU3 MO3 GL1 | E | 2
+Taric | UTILITY | AP | M | Warden,Enchanter | SU3 PE3 CC2 FR2 | M | 2
+Teemo | TOP | AP | R | Specialist,Poke | PO2 SP2 | M | 1
+Thresh | UTILITY | AP | M | Catcher,Warden | PI3 CC3 PE3 EN2 SU1 | M | 3
+Tristana | BOTTOM,MIDDLE | AD | R | Marksman,Burst | BU2 DP2 MO2 WC2 | M | 1
+Trundle | JUNGLE,TOP | AD | M | Juggernaut,Tank killer | TS3 DP2 SP2 FR1 | M | 1
+Tryndamere | TOP | AD | M | Split pusher | SP3 DP3 MO1 | L | 2
+TwistedFate | MIDDLE | AP | R | Roamer,Catcher | GL3 PI2 CC2 WC2 | M | 2
+Twitch | BOTTOM,JUNGLE | AD | R | Hypercarry,Stealth | DP3 BU1 | L | 2
+Udyr | JUNGLE,TOP | MIX | M | Juggernaut,Tank | FR2 DP2 MO1 | M | 1
+Urgot | TOP | AD | M | Juggernaut | FR2 DP2 TS2 CC1 | M | 2
+Varus | BOTTOM,MIDDLE | MIX | R | Poke,Marksman | PO3 CC2 PI1 | M | 2
+Vayne | BOTTOM,TOP | AD | R | Hypercarry,Duelist | DP3 TS3 PE1 | L | 3
+Veigar | MIDDLE,UTILITY | AP | R | Burst mage | BU3 CC2 WC2 | L | 1
+Velkoz | UTILITY,MIDDLE | AP | R | Artillery mage | PO3 BU2 TS2 CC1 | M | 2
+Vex | MIDDLE | AP | R | Burst mage,Anti-dash | BU3 CC2 WC2 EN1 | M | 1
+Vi | JUNGLE | AD | M | Diver,Engage | EN3 DI3 CC3 BU2 PI2 | M | 1
+Viego | JUNGLE | AD | M | Skirmisher | DP3 DI2 MO1 | M | 3
+Viktor | MIDDLE | AP | R | Control mage | WC3 DP2 CC2 PO2 | L | 2
+Vladimir | MIDDLE,TOP | AP | M | Battle mage,Scaling | DP3 BU2 | L | 2
+Volibear | TOP,JUNGLE | MIX | M | Diver,Juggernaut | DI3 FR2 CC2 | E | 1
+Warwick | JUNGLE,TOP | AD | M | Diver,Skirmisher | DI3 CC2 DP2 | E | 1
+Xayah | BOTTOM | AD | R | Marksman | DP3 CC2 WC2 PE1 | M | 2
+Xerath | UTILITY,MIDDLE | AP | R | Artillery mage | PO3 BU2 CC1 | M | 2
+XinZhao | JUNGLE | AD | M | Diver,Skirmisher | DI3 DP2 CC2 EN2 | E | 1
+Yasuo | MIDDLE,TOP,BOTTOM | AD | M | Skirmisher | DP3 MO3 CC1 WC2 | M | 3
+Yone | MIDDLE,TOP | MIX | M | Skirmisher,Engage | DP3 MO2 EN2 CC2 | M | 3
+Yorick | TOP | AD | M | Split pusher | SP3 FR1 TS1 | M | 1
+Yunara | BOTTOM | MIX | R | Marksman,Hypercarry | DP3 MO2 WC2 CC1 | L | 2
+Yuumi | UTILITY | AP | R | Enchanter,Attach | SU3 PE1 | L | 1
+Zaahen | TOP | AD | M | Juggernaut,Bruiser | FR2 DP2 CC2 DI1 | M | 2
+Zac | JUNGLE,TOP,UTILITY | AP | M | Engage tank | EN3 FR3 CC3 DI2 | M | 2
+Zed | MIDDLE,JUNGLE | AD | M | Assassin | BU3 MO3 SP1 | M | 3
+Zeri | BOTTOM | AD | R | Marksman,Kiter | DP3 MO3 | L | 3
+Ziggs | MIDDLE,BOTTOM | AP | R | Artillery mage,Siege | PO3 WC3 BU1 | M | 1
+Zilean | UTILITY,MIDDLE | AP | R | Enchanter,Utility | SU2 PE3 CC2 PO1 | L | 2
+Zoe | MIDDLE | AP | R | Burst mage,Poke | PO3 BU3 PI2 | M | 3
+Zyra | UTILITY,JUNGLE | AP | R | Control mage,Poke | PO2 CC2 WC2 DP2 | M | 1

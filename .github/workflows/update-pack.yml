@@ -1,0 +1,43 @@
+# Keeps every installed PICKBANS up to date without anyone's PC being on.
+# Builds the data pack (roster + real stats + texts) and publishes it on the `data` branch;
+# apps read manifest.json from there at each launch.
+name: Update data pack
+
+on:
+  schedule:
+    - cron: "23 10 * * *"   # daily; the script only refetches stats on a new patch or after 3 days
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths: ["tools/kb/**", "tools/*.py", "pickbans/pack.py", "pickbans/opgg.py", "pickbans/__init__.py"]
+
+permissions:
+  contents: write
+
+concurrency: update-pack
+
+jobs:
+  pack:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Get what is currently published
+        run: |
+          mkdir -p previous
+          if git fetch origin data --depth 1; then git archive FETCH_HEAD | tar -x -C previous; else echo "first run"; fi
+      - name: Build the pack
+        id: build
+        run: python tools/publish_pack.py --previous previous --out public --max-age-days 3
+      - name: Publish to the data branch
+        if: steps.build.outputs.changed == 'true'
+        run: |
+          cd public
+          git init -q -b data
+          git config user.name "pickbans-bot"
+          git config user.email "pickbans-bot@users.noreply.github.com"
+          git add .
+          git commit -q -m "Data pack $(date -u +%Y-%m-%d)"
+          git push -f "https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}" data

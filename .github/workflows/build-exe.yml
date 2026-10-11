@@ -1,0 +1,30 @@
+# Push a tag like v0.2.0 -> builds PICKBANS.exe on Windows and attaches it to a GitHub release.
+name: Build exe
+
+on:
+  push:
+    tags: ["v*"]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  exe:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - run: pip install pyinstaller
+      - run: python tools/build_pack.py
+      - run: python -m PyInstaller --noconfirm --clean --onefile --windowed --name PICKBANS --add-data "pickbans/web;pickbans/web" --add-data "pickbans/data;pickbans/data" run_pickbans.py
+      - uses: softprops/action-gh-release@v2
+        if: startsWith(github.ref, 'refs/tags/')
+        with:
+          files: dist/PICKBANS.exe
+      - uses: actions/upload-artifact@v4
+        with:
+          name: PICKBANS
+          path: dist/PICKBANS.exe

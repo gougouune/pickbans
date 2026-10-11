@@ -1,0 +1,22 @@
+# Baseline tier list per role. Champs not listed for a role they can play = B.
+# BASELINE ONLY: general long-term strength, not live patch stats. Replaced when a stats source is plugged in.
+TOP S: Darius,Garen,Mordekaiser,Sett,Aatrox
+TOP A: Camille,Fiora,Jax,Renekton,Malphite,Ornn,Sion,Riven,Volibear,Nasus,Illaoi,Zaahen,Ambessa
+TOP C: Singed,Kled,Teemo,Quinn,Kayle,Akshan,Heimerdinger,Vayne,Yasuo,Rumble
+TOP D: Ryze,Cassiopeia,Pantheon,Gragas,Aurora,Vladimir
+JUNGLE S: Vi,Warwick,XinZhao,Hecarim,Amumu
+JUNGLE A: Nocturne,Sejuani,Diana,Kayn,Khazix,Viego,JarvanIV,Graves,Lillia,Briar,Volibear,Skarner,Locke
+JUNGLE C: Karthus,Ivern,Shaco,Nidalee,Elise,Kindred,Taliyah,Sylas,Gragas,Twitch
+JUNGLE D: Fiddlesticks,Morgana,Zyra,Qiyana,Talon,Pantheon
+MIDDLE S: Ahri,Malzahar,Annie,Vex,Syndra
+MIDDLE A: Orianna,Viktor,Galio,Sylas,Katarina,Yone,Hwei,Mel,Aurora,Naafiri,Veigar,Lux,Zed
+MIDDLE C: Ryze,Azir,Anivia,Corki,Zoe,Leblanc,Kassadin,Akshan,Qiyana,AurelionSol,Taliyah,TwistedFate
+MIDDLE D: Neeko,Heimerdinger,Kennen,Rumble,Pantheon
+BOTTOM S: Jinx,Caitlyn,MissFortune,Kaisa,Ezreal
+BOTTOM A: Jhin,Ashe,Smolder,Sivir,Varus,Yunara,Xayah,Lucian,Tristana,Vayne
+BOTTOM C: Aphelios,Draven,Kalista,Nilah,Zeri,Samira,Twitch,KogMaw
+BOTTOM D: Ziggs,Seraphine,Swain,Senna
+UTILITY S: Nautilus,Leona,Lulu,Thresh,Nami
+UTILITY A: Blitzcrank,Braum,Janna,Karma,Milio,Rakan,Rell,Soraka,Lux,Morgana,Alistar
+UTILITY C: Pyke,Bard,Zilean,Taric,Renata,Sona,Yuumi,Seraphine,Velkoz,Hwei,Mel,Swain
+UTILITY D: Pantheon,Galio,Neeko,Shaco,TahmKench,Zac,Malphite,Sett

@@ -1,0 +1,28 @@
+# Off-meta / "oh btw" picks. Id | role | trigger | why
+# triggers: always (always a candidate), no_tanks (enemy has <=1 frontline), all_melee (enemy has 4+ melee),
+#   many_tanks (enemy has 3+ frontline), squishy (enemy has 0-1 frontline & no peel), no_cc (enemy low CC),
+#   class_banned:<Class> (every popular <Class> for your role is banned/taken)
+Teemo | UTILITY | always | Shrooms everywhere, blinds the ADC. Annoying and legit.
+Senna | UTILITY | always | Scales forever, heals + poke. Pair with a tanky ADC.
+Karthus | BOTTOM | always | Karthus bot: huge waveclear and global ult from lane.
+Swain | BOTTOM | always | Tanky mage bot — wins fights by draining everyone.
+Heimerdinger | UTILITY | always | Turrets win 2v2s early.
+Pantheon | UTILITY | no_cc | Point-and-click stun + ult to roam everywhere.
+Kayle | MIDDLE | squishy | Safe scaling hypercarry mid.
+Yasuo | BOTTOM | class_banned:Marksman | They banned the marksmen? Yasuo bot. Crit + windwall.
+Nilah | BOTTOM | class_banned:Marksman | They banned the marksmen? Melee ADC Nilah.
+Seraphine | BOTTOM | class_banned:Marksman | They banned the marksmen? Seraphine bot — AP carry with heals.
+Ziggs | BOTTOM | class_banned:Marksman | Ziggs bot — takes towers super fast.
+Vayne | TOP | many_tanks | Top Vayne: true damage shreds their tanks, they hate laning vs range.
+Quinn | TOP | all_melee | Ranged top vs melee = free poke all lane.
+Teemo | TOP | all_melee | They're all melee? Teemo blind + shrooms = they cry.
+Brand | JUNGLE | squishy | Brand jungle: clears fast, burns squishies.
+Zyra | JUNGLE | squishy | Plants clear camps, big AoE fights.
+MasterYi | JUNGLE | no_cc | They have almost no CC — Yi can run the game.
+Kogmaw | MIDDLE | many_tanks | Kog'Maw mid melts tanks.
+Malphite | UTILITY | squishy | Big ult engage onto squishies.
+Sion | MIDDLE | always | Sion mid: tank that roams with ult.
+Singed | UTILITY | always | Singed support: fling + poison chaos.
+Galio | UTILITY | always | Galio support: taunt + ult to save anyone.
+Shaco | UTILITY | squishy | Box bush traps, bursts squishies.
+Twitch | JUNGLE | squishy | Invisible jungler, ambushes squishies.
