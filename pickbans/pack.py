@@ -114,7 +114,8 @@ def build_pack(kb_dir):
             s = json.load(f)
         pack.update(stats=s["meta"], matchups=s["matchups"], meta_source=s.get("source", "op.gg"),
                     stats_version=s["version"], stats_at=s["fetched_at"],
-                    matchups_version=s["version"], matchups_at=s["fetched_at"])
+                    matchups_version=s["version"], matchups_at=s["fetched_at"],
+                    matchups_rank=s.get("matchups_rank", {}), stats_rank=s.get("rank"))
     return pack
 
 
@@ -270,7 +271,7 @@ def refresh_pool(pack, pool, max_per_run=8):
     return n
 
 
-def refresh_tiers(pack, max_age_days=3):
+def refresh_tiers(pack, max_age_days=10):
     """Keep lane tiers / win rates fresh between app releases: one OP.GG call, at most every few days.
     (Full matchup tables are ~270 calls, so those only come with a new data pack.)"""
     if time.time() - pack.get("stats_at", 0) < max_age_days * 86400:
@@ -282,7 +283,8 @@ def refresh_tiers(pack, max_age_days=3):
         meta = opgg.lane_meta(lambda n: by_name.get(norm(n)))
         if sum(len(v) for v in meta.values()) < 100:
             return pack, "tier refresh skipped (incomplete answer)"
-        pack.update(stats=meta, meta_source="op.gg", stats_at=int(time.time()), stats_version=pack["version"])
+        pack.update(stats=meta, meta_source="op.gg", stats_at=int(time.time()), stats_version=pack["version"],
+                    stats_rank="emerald_plus")
         pack.setdefault("matchups", {})
         _save(pack)
         return pack, "Lane tiers refreshed from OP.GG"

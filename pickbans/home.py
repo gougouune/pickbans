@@ -17,6 +17,7 @@ def build_home(engine, profile):
         "facts": _facts(engine, profile, pool),
         "has_stats": bool(engine.pack.get("matchups")),
         "stats_patch": engine.pack.get("stats_version"),
+        "stats_rank": engine.pack.get("stats_rank"),
     } if pool or profile.recent else None
 
 
@@ -59,8 +60,13 @@ def _notebook(engine, profile, cid, role):
         real = engine.pair(role, cid, vs)
         rows.append({"vs": vs, "w": w, "g": g, "wr": round(real[0], 3) if real else None})
     table = engine.pack.get("matchups", {}).get(role, {}).get(cid, {})
-    rated = sorted(((opp, (wins + 100) / (games + 200), games) for opp, (games, wins) in table.items() if games >= MIN_GAMES),
-                   key=lambda x: x[1])
+    opps = set(table) | set(engine.pack.get("matchups_rank", {}).get(role, {}).get(cid, {}))
+    rated = []
+    for opp in opps:
+        real = engine.pair(role, cid, opp)
+        if real and real[1] >= MIN_GAMES and opp in engine.champs:
+            rated.append((opp, real[0], real[1]))
+    rated.sort(key=lambda x: x[1])
     fmt = lambda x: {"vs": x[0], "wr": round(x[1], 3), "games": x[2]}
     return {"role": role, "mine": rows, "worst": [fmt(x) for x in rated[:4]], "best": [fmt(x) for x in rated[::-1][:4]]}
 

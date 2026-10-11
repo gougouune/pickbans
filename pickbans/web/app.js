@@ -3,6 +3,7 @@ let lastSeq = -1;
 const $root = document.getElementById("root");
 const ROLE = { TOP: "Top", JUNGLE: "Jungle", MIDDLE: "Mid", BOTTOM: "Bot", UTILITY: "Support" };
 const esc = (s) => String(s ?? "").replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+const RANK_LABEL = { gold: "Gold", gold_plus: "Gold+", emerald_plus: "Emerald+", all: "all ranks", silver: "Silver", platinum: "Platinum" };
 const DMG = { AD: "physical (AD)", AP: "magic (AP)", MIX: "mixed AD/AP" };
 const img = (id) => (CH[id] ? `<img class="dmg-${CH[id].dmg}" src="${CH[id].img}" alt="${esc(CH[id].name)}" title="${esc(CH[id].name)} — ${DMG[CH[id].dmg] || ""}">` : "");
 const nm = (id) => esc(CH[id]?.name || id);
@@ -58,7 +59,7 @@ function render(s) {
 
 function foot(s) {
   const demo = s.demo ? `<a onclick="post('/api/demo/stop')">Exit demo</a>` : `<a onclick="post('/api/demo/start')">Try the demo</a>`;
-  const meta = s.meta_source === "baseline" ? " · meta: baseline list" : s.meta_source ? ` · stats: ${esc(s.meta_source)}` : "";
+  const meta = s.meta_source === "baseline" ? " · meta: baseline list" : s.meta_source ? ` · stats: ${esc(s.meta_source)}${s.stats_rank ? " " + esc(RANK_LABEL[s.stats_rank] || s.stats_rank) : ""}` : "";
   const upd = s.update ? `<div class="update">New version ${esc(s.update.version)} available${s.update.url ? ` — <a href="${esc(s.update.url)}" target="_blank">download</a>` : ""}</div>` : "";
   return `<div class="foot">${upd}<div class="legend"><i class="dmg-AD"></i>AD <i class="dmg-AP"></i>AP <i class="dmg-MIX"></i>mixed</div>${demo} · v${esc(s.version)}${meta}</div>`;
 }
@@ -126,7 +127,7 @@ function notebook(h) {
     ? `<div class="ncols"><div><div class="nsub good">Good lanes</div>${nb.best.map((m) => mline(m)).join("")}</div>
         <div><div class="nsub bad">Hard lanes</div>${nb.worst.map((m) => mline(m)).join("")}</div></div>`
     : `<div class="nsub muted">No matchup stats for this lane yet.</div>`;
-  return `<h2>Matchup notebook <small>% = win rate, all players</small></h2><div class="ntabs">${tabs}</div><div class="nb">${head}${mine}${stats}</div>`;
+  return `<h2>Matchup notebook <small>% = win rate in ranked</small></h2><div class="ntabs">${tabs}</div><div class="nb">${head}${mine}${stats}</div>`;
 }
 
 function card(r, opts = {}) {

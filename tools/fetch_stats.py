@@ -16,6 +16,9 @@ from pickbans import opgg  # noqa: E402
 from pickbans.pack import fetch_roster, latest_version, norm  # noqa: E402
 
 OUT = os.path.join(ROOT, "tools", "kb", "stats.json")
+# The tool is aimed at Gold and below, so lane stats come from this rank.
+# (OP.GG only gives full matchup tables for its default bracket, Emerald+; per-rank head-to-heads override those.)
+RANK = sys.argv[sys.argv.index("--rank") + 1] if "--rank" in sys.argv else "gold"
 
 version = latest_version()
 roster = fetch_roster(version)
@@ -35,7 +38,11 @@ if os.path.exists(OUT) and "--fresh" not in sys.argv:
 if "--max-age-days" in sys.argv and old:
     days = float(sys.argv[sys.argv.index("--max-age-days") + 1])
     age = (time.time() - old.get("fetched_at", 0)) / 86400
-    missing = [(r, c) for r, lane in old.get("meta", {}).items() for c in lane if c not in old.get("matchups", {}).get(r, {})]
+    if old.get("rank") != RANK:
+        old = dict(old, fetched_at=0)  # rank changed: redo everything
+    age = (time.time() - old.get("fetched_at", 0)) / 86400
+    missing = [(r, c) for r, lane in old.get("meta", {}).items() for c in lane
+               if c not in old.get("matchups", {}).get(r, {}) or c not in old.get("rank_done", {}).get(r, [])]
     if age < days and not missing:
         print(f"Stats are {age:.1f} days old (< {days}) for patch {version}: nothing to do")
         sys.exit(0)
@@ -75,7 +82,49 @@ with ThreadPoolExecutor(3) as pool:
                 json.dump({"version": version, "fetched_at": fetched_at, "source": "op.gg",
                            "meta": meta, "matchups": matchups}, f)
 
-with open(OUT, "w", encoding="utf-8") as f:
-    json.dump({"version": version, "fetched_at": fetched_at, "source": "op.gg", "meta": meta, "matchups": matchups}, f)
+# ---- pass 2: the same lanes at the target rank (stats + a few head-to-heads each) ----
+base_meta = old.get("base_meta") if FILL_ONLY else None
+base_meta = base_meta or json.loads(json.dumps(meta))   # Emerald+ lane list, kept as fallback
+matchups_rank = old.get("matchups_rank", {}) if FILL_ONLY else {}
+rank_done = old.get("rank_done", {}) if FILL_ONLY else {}
+rank_meta = json.loads(json.dumps(old["meta"])) if FILL_ONLY else json.loads(json.dumps(base_meta))
+jobs2 = [(role, cid) for role, champs in base_meta.items() for cid in champs if cid not in rank_done.get(role, [])]
+print(f"Rank '{RANK}': {len(jobs2)} champion/lane stats to fetch")
+
+
+def fetch_rank(job):
+    role, cid = job
+    try:
+        return role, cid, opgg.rank_stats(roster[cid], role, RANK, key_to_id)
+    except Exception as e:
+        return role, cid, e
+
+
+def save():
+    with open(OUT, "w", encoding="utf-8") as f:
+        json.dump({"version": version, "fetched_at": fetched_at, "source": "op.gg", "rank": RANK,
+                   "meta": rank_meta, "base_meta": base_meta, "matchups": matchups,
+                   "matchups_rank": matchups_rank, "rank_done": rank_done}, f)
+
+
+done2 = failed2 = 0
+with ThreadPoolExecutor(3) as pool:
+    for role, cid, res in pool.map(fetch_rank, jobs2):
+        if isinstance(res, Exception):
+            failed2 += 1
+            print("  FAILED", res)
+        else:
+            stat, pairs = res
+            if stat and stat["play"] >= 500:      # enough games at this rank to trust the lane numbers
+                rank_meta[role][cid] = stat
+            if pairs:
+                matchups_rank.setdefault(role, {})[cid] = pairs
+            rank_done.setdefault(role, []).append(cid)
+        done2 += 1
+        if done2 % 25 == 0:
+            print(f"  {done2}/{len(jobs2)}")
+            save()
+save()
 pairs = sum(len(t) for r in matchups.values() for t in r.values())
-print(f"Saved {OUT}: {pairs} matchup pairs, {failed} failed")
+rpairs = sum(len(t) for r in matchups_rank.values() for t in r.values())
+print(f"Saved {OUT}: {pairs} matchup pairs (Emerald+), {rpairs} head-to-heads at {RANK}, {failed + failed2} failed")

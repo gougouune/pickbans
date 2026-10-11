@@ -150,3 +150,39 @@ def matchup_table(champ, role, any_opponent, key_to_id):
             last = e
             time.sleep(0.5)
     raise RuntimeError(f"{champ['id']} {role}: {last}")
+
+
+_RANK_FIELDS = [
+    "data.summary.positions[].name",
+    "data.summary.positions[].stats.{play,win_rate,pick_rate,ban_rate,role_rate}",
+    "data.summary.positions[].stats.tier_data.{tier,rank,rank_prev_patch}",
+    "data.weak_counters[].{champion_id,play,win}",
+    "data.strong_counters[].{champion_id,play,win}",
+]
+_POS_NAME = {"TOP": "TOP", "JUNGLE": "JUNGLE", "MIDDLE": "MID", "BOTTOM": "ADC", "UTILITY": "SUPPORT"}
+
+
+def rank_stats(champ, role, rank, key_to_id):
+    """Stats for ONE rank (e.g. "gold"): lane win/pick/ban rate + tier, and the few head-to-heads OP.GG
+    gives per rank (3 best + 3 worst). Returns (stat dict or None, {opponent id: [games, wins]})."""
+    last = None
+    for name in name_variants(champ):
+        try:
+            data = parse_compact(call("lol_get_champion_analysis", {
+                "game_mode": "ranked", "champion": name, "position": POS[role], "tier": rank,
+                "desired_output_fields": _RANK_FIELDS}))["data"]
+            stat = None
+            for pos in (data.get("summary") or {}).get("positions") or []:
+                if pos.get("name") == _POS_NAME[role] and pos.get("stats"):
+                    st, td = pos["stats"], pos["stats"].get("tier_data") or {}
+                    stat = {"wr": st["win_rate"], "pr": st["pick_rate"], "br": st["ban_rate"], "rr": st["role_rate"],
+                            "tier": td.get("tier", 4), "rank": td.get("rank", 99), "prev": td.get("rank_prev_patch"),
+                            "play": st["play"]}
+            pairs = {key_to_id[c["champion_id"]]: [c["play"], c["win"]]
+                     for c in (data.get("weak_counters") or []) + (data.get("strong_counters") or [])
+                     if c.get("champion_id") in key_to_id and c.get("play")}
+            return stat, pairs
+        except Exception as e:
+            last = e
+            time.sleep(0.5)
+    raise RuntimeError(f"{champ['id']} {role} {rank}: {last}")

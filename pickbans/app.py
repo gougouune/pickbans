@@ -46,7 +46,8 @@ class App:
         self.profile_loading = False
         self.tracker = None
         self.state = {"status": "starting", "seq": 0, "message": "Starting…", "version": __version__,
-                      "patch": self.pack["version"], "meta_source": self.pack.get("meta_source", "baseline")}
+                      "patch": self.pack["version"], "meta_source": self.pack.get("meta_source", "baseline"),
+                      "stats_rank": self.pack.get("stats_rank")}
 
     # ---------- state ----------
     def set(self, **kw):
@@ -73,7 +74,8 @@ class App:
         self.pack = pack
         self.engine = Engine(pack)
         self.id_to_key = {cid: c["key"] for cid, c in pack["champions"].items()}
-        self.set(patch=pack["version"], pack_msg=msg, meta_source=pack.get("meta_source", "baseline"))
+        self.set(patch=pack["version"], pack_msg=msg, meta_source=pack.get("meta_source", "baseline"),
+                 stats_rank=pack.get("stats_rank"))
         if not self.demo_steps and (self.profile.mastery or self.profile.recent):
             self.set(home=build_home(self.engine, self.profile))
 

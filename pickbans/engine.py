@@ -68,19 +68,32 @@ class Engine:
         pos = self.champs.get(cid, {}).get("positions", [])
         return (0.5, 0.2, 0.08)[pos.index(role)] if role in pos[:3] else 0.0
 
-    def pair(self, role, a, b):
-        """(win rate of a vs b in that lane, games) from real stats, or None. Shrunk toward 50% when few games."""
-        table = self.pack.get("matchups", {}).get(role, {})
+    def _table(self, key, role, a, b):
+        table = self.pack.get(key, {}).get(role, {})
         if b in table.get(a, {}):
             games, wins = table[a][b]
-        elif a in table.get(b, {}):
+            return games, wins
+        if a in table.get(b, {}):
             games, wins = table[b][a]
-            wins = games - wins
+            return games, games - wins
+        return None
+
+    def pair(self, role, a, b):
+        """(win rate of a vs b in that lane, games) from real stats, or None.
+        Base = the full table (Emerald+), shrunk toward 50% on small samples. When the pack also has a
+        head-to-head at the target rank (Gold), it pulls the number toward what happens at that rank."""
+        base = self._table("matchups", role, a, b)
+        rank = self._table("matchups_rank", role, a, b)
+        if base and base[0] >= 30:
+            wr, games = (base[1] + 100) / (base[0] + 200), base[0]
+        elif rank:
+            wr, games = 0.5, 0
         else:
             return None
-        if games < 30:
-            return None
-        return (wins + 100) / (games + 200), games
+        if rank:
+            wr = (rank[1] + wr * 150) / (rank[0] + 150)
+            games += rank[0]
+        return wr, games
 
     def totals(self, ids, hovers=()):
         tot = {}
