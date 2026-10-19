@@ -11,6 +11,11 @@ const nm = (id) => esc(CH[id]?.name || id);
 const post = (url) => fetch(url, { method: "POST" }).then(() => (lastSeq = -1));
 
 let fails = 0;
+let itemsTried = 0;
+async function loadItems() {
+  itemsTried = Date.now();
+  try { ITEMS = await (await fetch("/api/items")).json(); } catch (e) { ITEMS = []; }
+}
 async function poll() {
   try {
     const s = await (await fetch("/api/state")).json();
@@ -19,6 +24,7 @@ async function poll() {
       lastSeq = s.seq;
       LAST = s;
       render(s);
+      if (!ITEMS.length && Date.now() - itemsTried > 3000) loadItems().then(() => ITEMS.length && rerender());
     }
   } catch (e) {
     if (++fails === 4) appGone();
@@ -36,7 +42,7 @@ function appGone() {
 async function boot() {
   try {
     CH = await (await fetch("/api/champs")).json();
-    try { ITEMS = await (await fetch("/api/items")).json(); } catch (e) { ITEMS = []; }
+    await loadItems();
     poll();
   } catch (e) {
     appGone();
@@ -48,8 +54,8 @@ function header(s) {
   document.getElementById("patch").textContent = s.patch ? `patch ${s.patch}` : "";
   const c = document.getElementById("conn");
   if (s.demo) { c.textContent = "DEMO"; c.className = "pill demo"; }
-  else if (s.status === "no_client") { c.textContent = "League not open"; c.className = "pill"; }
-  else { c.textContent = "connected"; c.className = "pill ok"; }
+  else if (s.status === "no_client" || s.status === "starting") { c.textContent = "● League not connected"; c.className = "pill"; }
+  else { c.textContent = "● League connected"; c.className = "pill ok"; }
 }
 
 function render(s) {
@@ -79,10 +85,11 @@ const ago = (t) => { const h = (Date.now() / 1000 - t) / 3600; return h < 1 ? "n
 
 function idle(s) {
   const p = s.profile, h = s.home;
-  const btn = s.status === "no_client" && !s.demo ? `<p><button class="primary" onclick="post('/api/demo/start')">Try the demo</button></p>` : "";
-  let html = `<div class="home-head"><div><b>${esc(s.message || "Waiting…")}</b>${p && p.name ? `<div class="muted">Hi ${esc(p.name)}${p.main_role ? ` · mostly ${ROLE[p.main_role] || p.main_role}` : ""}</div>` : ""}</div></div>${btn}`;
-  if (!h) return html + itemQuiz() + `<div class="center muted">${p && p.name ? "Reading your games…" : ""}${s.pack_msg ? `<div style="font-size:12px">${esc(s.pack_msg)}</div>` : ""}</div>`;
-
+  const busy = { "In queue…": 1, "Match found!": 1, "In lobby — queue up!": 1 }[s.message] ? `<span class="statusline">${esc(s.message)}</span>` : "";
+  let html = `<div class="home-head">${p && p.name ? `<b>Hi ${esc(p.name)}</b>${p.main_role ? ` <span class="muted">· mostly ${ROLE[p.main_role] || p.main_role}</span>` : ""}` : "<b>Welcome</b>"}${busy}</div>`;
+  if (!h) {
+    return html + `<div class="muted hint">Open League once and your recent games and matchup notebook show up here.</div>` + itemQuiz();
+  }
   if (h.recent.length) {
     const wins = h.recent.filter((g) => g.win).length;
     html += `<h2>Recent games <small>${wins}W ${h.recent.length - wins}L</small></h2><div class="recent">` + h.recent.map((g) =>

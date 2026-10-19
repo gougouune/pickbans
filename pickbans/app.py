@@ -23,6 +23,15 @@ from .profile import Profile
 log = logging.getLogger("pickbans")
 
 IN_GAME = {"GameStart", "InProgress", "Reconnect"}
+HOME_CACHE = os.path.join(paths.USER_DIR, "home.json")
+
+
+def _load_home_cache():
+    try:
+        with open(HOME_CACHE, encoding="utf-8") as f:
+            return json.load(f)
+    except (OSError, ValueError):
+        return None
 
 
 def _newer(a, b):
@@ -48,6 +57,9 @@ class App:
         self.state = {"status": "starting", "seq": 0, "message": "Starting…", "version": __version__,
                       "patch": self.pack["version"], "meta_source": self.pack.get("meta_source", "baseline"),
                       "stats_rank": self.pack.get("stats_rank")}
+        cached = _load_home_cache()  # last home screen, so it's there even with League closed
+        if cached:
+            self.state.update(home=cached.get("home"), profile=cached.get("profile"))
 
     # ---------- state ----------
     def set(self, **kw):
@@ -77,7 +89,7 @@ class App:
         self.set(patch=pack["version"], pack_msg=msg, meta_source=pack.get("meta_source", "baseline"),
                  stats_rank=pack.get("stats_rank"))
         if not self.demo_steps and (self.profile.mastery or self.profile.recent):
-            self.set(home=build_home(self.engine, self.profile))
+            self.show_home(self.profile)
 
     def champs_json(self):
         v = self.pack["version"]
@@ -138,8 +150,22 @@ class App:
                 self.profile_stale = True
             if self.state.get("status") != "assessment" or phase in ("Lobby", "Matchmaking", "ReadyCheck"):
                 msg = {"Lobby": "In lobby — queue up!", "Matchmaking": "In queue…", "ReadyCheck": "Match found!"}.get(phase, "Waiting for champ select…")
-                self.set(status="idle", message=msg, in_select=False, profile=self.profile.to_json())
+                self.set(status="idle", message=msg, in_select=False,
+                         **({"profile": self.profile.to_json()} if self.profile.name else {}))
             time.sleep(1)
+
+    def show_home(self, p):
+        """Rebuild the home screen from a real profile and remember it on disk."""
+        home = build_home(self.engine, p)
+        if not home:
+            return
+        profile = p.to_json()
+        self.set(home=home, profile=profile)
+        try:
+            with open(HOME_CACHE, "w", encoding="utf-8") as f:
+                json.dump({"home": home, "profile": profile}, f)
+        except OSError:
+            pass
 
     def load_profile(self, lcu):
         """Runs in the background — match history can take 10+ s on a slow client."""
@@ -149,17 +175,17 @@ class App:
                 p.owned = self.profile.owned
             if not self.demo_steps:
                 self.profile = p
-                self.set(profile=p.to_json(), home=build_home(self.engine, p))
+                self.show_home(p)
             log.info("profile: %s, %d mastery champs, %d recent games", p.name, len(p.mastery),
                      sum(g["games"] for g in p.games.values()))
             added = p.backfill(lcu, self.engine)  # who you laned against, for the matchup notebook
             if added and not self.demo_steps:
                 log.info("matchup notebook: %d games added", added)
-                self.set(home=build_home(self.engine, p))
+                self.show_home(p)
             n = refresh_pool(self.pack, pool_of(self.engine, p))  # plan B if the published pack is late
             if n and not self.demo_steps:
                 log.info("refreshed %d matchup tables for your champions from OP.GG", n)
-                self.set(home=build_home(self.engine, p))
+                self.show_home(p)
         except Exception:
             log.exception("profile load failed")
         finally:
@@ -212,8 +238,10 @@ class App:
         self.tracker = None
         self.profile = getattr(self, "saved_profile", self.profile)
         self.last_draft = None
+        cached = _load_home_cache() or {}
+        real = build_home(self.engine, self.profile)
         self.set(demo=False, status="starting", message="", assessment=None, draft=None, recs=None, live=None,
-                 profile=self.profile.to_json(), home=build_home(self.engine, self.profile))
+                 profile=self.profile.to_json() if real else cached.get("profile"), home=real or cached.get("home"))
 
     def tick_demo(self):
         el = time.time() - self.demo_t0

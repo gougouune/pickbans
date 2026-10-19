@@ -160,3 +160,10 @@ h2 small a { color: var(--accent); cursor: pointer; }
 .qchoice.right { border-color: var(--good); background: #34d3991a; opacity: 1; }
 .qchoice.wrong { border-color: var(--bad); background: #f871711f; opacity: 1; }
 .qafter { display: flex; justify-content: space-between; align-items: center; margin-top: 10px; font-weight: 600; }
+
+/* home header */
+.home-head { display: flex; align-items: baseline; gap: 6px; flex-wrap: wrap; }
+.home-head b { font-size: 16px; }
+.statusline { margin-left: auto; font-size: 12px; color: var(--S); font-weight: 600; }
+.hint { font-size: 13px; margin: 6px 0 4px; }
+#conn { white-space: nowrap; }
