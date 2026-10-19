@@ -150,3 +150,13 @@ h2 small a { color: var(--accent); cursor: pointer; }
 .mw { font-size: 12px; font-weight: 600; text-align: right; }
 
 .update { color: var(--S); margin-bottom: 8px; font-size: 12px; } .update a { color: var(--S); }
+
+/* item quiz */
+.qitem { display: flex; gap: 10px; align-items: center; margin-bottom: 10px; }
+.qitem img { width: 44px; height: 44px; border-radius: 6px; border: 1px solid var(--line); }
+.qchoices { display: grid; gap: 6px; }
+.qchoice { text-align: left; font-size: 13px; padding: 8px 10px; line-height: 1.35; }
+.qchoice:disabled { cursor: default; opacity: .55; }
+.qchoice.right { border-color: var(--good); background: #34d3991a; opacity: 1; }
+.qchoice.wrong { border-color: var(--bad); background: #f871711f; opacity: 1; }
+.qafter { display: flex; justify-content: space-between; align-items: center; margin-top: 10px; font-weight: 600; }

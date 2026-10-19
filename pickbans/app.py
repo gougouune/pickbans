@@ -253,6 +253,9 @@ def make_handler(app):
                 return self._json(app.snapshot())
             if self.path.startswith("/api/champs"):
                 return self._json(app.champs_json())
+            if self.path.startswith("/api/items"):
+                v = app.pack["version"]
+                return self._json([dict(it, img=f"{DDRAGON}/cdn/{v}/img/item/{it['id']}.png") for it in app.pack.get("items", [])])
             if self.path.startswith("/api/log"):
                 try:
                     with open(paths.LOG_FILE, encoding="utf-8", errors="replace") as f:

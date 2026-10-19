@@ -58,7 +58,9 @@ class Engine:
         return self.pack["meta"].get(role, {}).get(cid, "B")
 
     def role_ok(self, cid, role, profile):
-        return role in self.champs[cid]["positions"] or bool(self.stat(cid, role)) or profile.played_in(cid, role) >= 2
+        st = self.stat(cid, role)
+        return (role in self.champs[cid]["positions"] or bool(st and st["rr"] >= 0.1)
+                or profile.played_in(cid, role) >= 2)
 
     def role_rate(self, cid, role):
         """How likely this champion is in this lane (0..1) — stats first, knowledge base as fallback."""
@@ -248,6 +250,55 @@ class Engine:
                 why = why or f"You win this matchup ({w}/{g})"
         return max(0.0, min(1.0, 0.5 + s)), why
 
+    def duo(self, cid, role, other):
+        """Bot lane is a 2v2: how `cid` (your support or ADC) does against the enemy's OTHER bot laner.
+        OP.GG only has same-lane tables, so this uses champion traits + the hand-written counter lists."""
+        c, o = self.champs[cid], self.champs.get(other, {})
+        t = lambda k: c["traits"].get(k, 0)
+        ot = o.get("traits", {})
+        s, why = 0.0, None
+        name = o.get("name", other)
+        if role == "UTILITY":  # you're the support, `other` is their ADC
+            if o.get("scaling") == "E":  # lane bully ADC: you need to protect your ADC / sustain
+                s += 0.04 * t("PE") + 0.03 * t("SU") + 0.02 * t("EN")
+                if t("PE") >= 2 or t("SU") >= 2:
+                    why = f"Holds up vs {name}'s early pressure"
+            if ot.get("MO", 0) <= 1:  # immobile ADC: hooks and engage land
+                s += 0.04 * t("PI") + 0.03 * t("EN")
+                if t("PI") >= 2 or t("EN") >= 3:
+                    why = why or f"Catches {name} (no escape)"
+            else:  # mobile ADC dodges hooks
+                s -= 0.03 * t("PI")
+        else:  # you're the ADC, `other` is their support
+            if ot.get("EN", 0) >= 3 or ot.get("PI", 0) >= 3:  # engage / hook support
+                s += 0.05 * t("MO") - (0.08 if t("MO") == 0 else 0)
+                if t("MO") >= 2:
+                    why = f"Can dodge {name}'s engage"
+                elif t("MO") == 0:
+                    why = f"{name} can lock you down easily"
+            if ot.get("PO", 0) >= 3:  # poke support: long lanes hurt short-range ADCs
+                s += 0.03 * t("PO") + 0.02 * t("WC")
+        if cid in o.get("weak_vs", []):
+            s += 0.15
+            why = f"Good into {name}"
+        if other in c.get("weak_vs", []):
+            s -= 0.15
+            why = f"{name} is a problem for it"
+        return max(0.0, min(1.0, 0.5 + s)), why
+
+    def lane_total(self, cid, ctx):
+        """Lane score vs your direct opponent, plus (bot lane) the enemy's other bot laner."""
+        parts = []
+        if ctx["opp"]:
+            parts.append((*self.lane(cid, ctx["opp"], ctx["profile"], ctx["role"]), 0.7))
+        if ctx.get("opp2"):
+            parts.append((*self.duo(cid, ctx["role"], ctx["opp2"]), 0.3 if ctx["opp"] else 1.0))
+        if not parts:
+            return 0.5, None
+        score = sum(v * w for v, _, w in parts) / sum(w for _, _, w in parts)
+        why = next((y for _, y, _ in parts if y), None)
+        return score, why
+
     def score(self, cid, ctx):
         role, profile = ctx["role"], ctx["profile"]
         comfort = profile.comfort(cid)
@@ -255,9 +306,9 @@ class Engine:
         meta = TIER_VALUE[tier]
         team, team_why = self.team_fit(cid, ctx["allies"], ctx["hovers"])
         enemy, enemy_why = self.vs_enemy(cid, ctx["ep"])
-        lane, lane_why = self.lane(cid, ctx["opp"], profile, role)
+        lane, lane_why = self.lane_total(cid, ctx)
         parts = {"comfort": comfort, "meta": meta, "team": team, "enemy": enemy, "lane": lane}
-        weights = WEIGHTS_OPP if ctx["opp"] else WEIGHTS
+        weights = WEIGHTS_OPP if (ctx["opp"] or ctx.get("opp2")) else WEIGHTS
         total = sum(weights[k] * v for k, v in parts.items())
         if self.champs[cid]["difficulty"] >= 3 and comfort < 0.25:
             total -= 0.06
@@ -281,6 +332,7 @@ class Engine:
         if ctx["no_profile"] and self.champs[cid]["difficulty"] == 1:
             reasons.append("Easy to learn")
         return {"id": cid, "score": round(total, 3), "grade": grade(total), "parts": {k: round(v, 2) for k, v in parts.items()},
+                "lane_why": lane_why,
                 "tier": tier, "reasons": reasons[:3]}
 
     # ---------- the main call ----------
@@ -290,10 +342,12 @@ class Engine:
         hovers = [a["hover"] for a in draft["allies"] if a["hover"] and not a["is_me"]]
         enemies = [e["champ"] for e in draft["enemies"] if e["champ"]]
         opp = next((e["champ"] for e in draft["enemies"] if e["champ"] and e.get("role") == role), None)
+        partner_role = {"UTILITY": "BOTTOM", "BOTTOM": "UTILITY"}.get(role)
+        opp2 = next((e["champ"] for e in draft["enemies"] if e["champ"] and e.get("role") == partner_role), None) if partner_role else None
         me = next((a for a in draft["allies"] if a["is_me"]), {})
         taken = set(allies) | set(enemies) | set(draft["bans"]) | set(hovers)
         no_profile = not profile.mastery and not profile.games
-        ctx = {"role": role, "profile": profile, "allies": allies, "hovers": hovers, "opp": opp,
+        ctx = {"role": role, "profile": profile, "allies": allies, "hovers": hovers, "opp": opp, "opp2": opp2,
                "ep": self.enemy_profile(enemies), "no_profile": no_profile}
 
         pool = [cid for cid in self.champs if cid not in taken and profile.owns(cid) and self.role_ok(cid, role, profile)]
@@ -306,8 +360,9 @@ class Engine:
             comfy = [r for r in by(lambda r: r["parts"]["comfort"]) if r["parts"]["comfort"] > 0.05][:3]
         ideal = by(lambda r: r["score"])[:3]
         counter = []
-        if opp:
-            counter = [r for r in by(lambda r: r["parts"]["lane"] * 0.6 + r["parts"]["comfort"] * 0.2 + r["parts"]["meta"] * 0.2)
+        if opp or opp2:
+            counter = [dict(r, reasons=[r["lane_why"]] + [x for x in r["reasons"] if x != r["lane_why"]][:1] if r["lane_why"] else r["reasons"])
+                       for r in by(lambda r: r["parts"]["lane"] * 0.6 + r["parts"]["comfort"] * 0.2 + r["parts"]["meta"] * 0.2)
                        if r["parts"]["lane"] > 0.55][:3]
 
         my_champ = me.get("champ")
@@ -315,6 +370,7 @@ class Engine:
             "role": role,
             "role_guessed": not draft.get("my_role"),
             "opponent": opp,
+            "opponents": [o for o in (opp, opp2) if o],
             "comfy": comfy,
             "ideal": ideal,
             "counter": counter,
@@ -412,9 +468,11 @@ class Engine:
         c = self.champs.get(cid)
         if not c:
             return None
-        lane, lane_why = self.lane(cid, opp, ctx["profile"], ctx["role"])
+        lane, lane_why = self.lane_total(cid, ctx)
+        opp2 = ctx.get("opp2")
         return {"id": cid, "styles": c["styles"], "play": c.get("play", ""),
                 "vs": self.champs.get(opp, {}).get("vs", "") if opp else "",
+                "opp2": opp2, "vs2": self.champs.get(opp2, {}).get("vs", "") if opp2 else "",
                 "lane": round(lane, 2), "lane_why": lane_why}
 
 

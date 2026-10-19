@@ -1,4 +1,5 @@
 let CH = {};
+let ITEMS = [];
 let lastSeq = -1;
 const $root = document.getElementById("root");
 const ROLE = { TOP: "Top", JUNGLE: "Jungle", MIDDLE: "Mid", BOTTOM: "Bot", UTILITY: "Support" };
@@ -35,6 +36,7 @@ function appGone() {
 async function boot() {
   try {
     CH = await (await fetch("/api/champs")).json();
+    try { ITEMS = await (await fetch("/api/items")).json(); } catch (e) { ITEMS = []; }
     poll();
   } catch (e) {
     appGone();
@@ -79,7 +81,7 @@ function idle(s) {
   const p = s.profile, h = s.home;
   const btn = s.status === "no_client" && !s.demo ? `<p><button class="primary" onclick="post('/api/demo/start')">Try the demo</button></p>` : "";
   let html = `<div class="home-head"><div><b>${esc(s.message || "Waiting…")}</b>${p && p.name ? `<div class="muted">Hi ${esc(p.name)}${p.main_role ? ` · mostly ${ROLE[p.main_role] || p.main_role}` : ""}</div>` : ""}</div></div>${btn}`;
-  if (!h) return html + `<div class="center muted">${p && p.name ? "Reading your games…" : ""}${s.pack_msg ? `<div style="font-size:12px">${esc(s.pack_msg)}</div>` : ""}</div>`;
+  if (!h) return html + itemQuiz() + `<div class="center muted">${p && p.name ? "Reading your games…" : ""}${s.pack_msg ? `<div style="font-size:12px">${esc(s.pack_msg)}</div>` : ""}</div>`;
 
   if (h.recent.length) {
     const wins = h.recent.filter((g) => g.win).length;
@@ -88,8 +90,56 @@ function idle(s) {
         <div class="rvs">${g.vs ? img(g.vs) : ""}</div><div class="rk">${g.k}/${g.d}/${g.a}</div></div>`).join("") + `</div>`;
   }
   if (h.facts.length) html += factCard(h.facts[factIdx % h.facts.length]);
+  html += itemQuiz();
   if (h.pool.length) html += notebook(h);
   return html;
+}
+
+// ---------- item quiz: "what does this item do?" ----------
+const store = { get: (k, d) => { try { return JSON.parse(localStorage.getItem(k)) ?? d; } catch (e) { return d; } },
+                set: (k, v) => { try { localStorage.setItem(k, JSON.stringify(v)); } catch (e) {} } };
+let quiz = null;          // {item, choices, picked}
+let streak = 0;
+let best = store.get("pickbans.itemBest", 0);
+const shuffle = (a) => { for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a; };
+
+function newQuiz() {
+  if (ITEMS.length < 4) return (quiz = null);
+  const item = ITEMS[Math.floor(Math.random() * ITEMS.length)];
+  const wrong = shuffle(ITEMS.filter((x) => x.answer !== item.answer)).slice(0, 3).map((x) => x.answer);
+  quiz = { item, choices: shuffle([item.answer, ...wrong]), picked: null };
+}
+
+function pickAnswer(i) {
+  if (!quiz || quiz.picked !== null) return;
+  quiz.picked = i;
+  if (quiz.choices[i] === quiz.item.answer) {
+    streak++;
+    if (streak > best) { best = streak; store.set("pickbans.itemBest", best); }
+  } else {
+    streak = 0;
+  }
+  rerender();
+}
+function nextQuiz() { newQuiz(); rerender(); }
+
+function itemQuiz() {
+  if (!quiz) newQuiz();
+  if (!quiz) return "";
+  const q = quiz, done = q.picked !== null;
+  const choices = q.choices.map((c, i) => {
+    let cls = "";
+    if (done && c === q.item.answer) cls = "right";
+    else if (done && i === q.picked) cls = "wrong";
+    return `<button class="qchoice ${cls}" onclick="pickAnswer(${i})" ${done ? "disabled" : ""}>${esc(c)}</button>`;
+  }).join("");
+  const after = done
+    ? `<div class="qafter"><span class="${q.choices[q.picked] === q.item.answer ? "good" : "bad"}">${q.choices[q.picked] === q.item.answer ? "Right!" : "Nope."}</span>
+        <button class="primary" onclick="nextQuiz()">Next item →</button></div>`
+    : "";
+  return `<h2>Item quiz <small>streak ${streak} · best ${best}</small></h2><div class="fact">
+    <div class="qitem"><img src="${q.item.img}" alt=""><div><b>${esc(q.item.name)}</b><div class="muted">What does it do?</div></div></div>
+    <div class="qchoices">${choices}</div>${after}</div>`;
 }
 
 function factCard(f) {
@@ -175,7 +225,8 @@ function champSelect(s) {
   if (picking) {
     html += section("Comfy picks", r.comfy, "No comfort champs available for this role.", "what you play");
     html += section("Ideal picks", r.ideal, "No picks available.", "you + both teams + bans");
-    html += section("Lane counter", r.counter, r.opponent ? `No strong counter to ${nm(r.opponent)} — go comfy.` : "Waiting for your lane opponent to lock…", r.opponent ? `vs ${nm(r.opponent)}` : "");
+    const opps = (r.opponents || []).map(nm).join(" + ");
+    html += section("Lane counter", r.counter, opps ? `No strong counter to ${opps} — go comfy.` : "Waiting for your lane opponent to lock…", opps ? `vs ${opps}` : "");
     if (r.cheese.length) html += section("Cheese ?", r.cheese, "", "oh btw");
   }
   if (r.my_pick) html += myPick(r.my_pick, r.opponent, !!me.champ);
@@ -189,6 +240,7 @@ function myPick(p, opp, locked) {
     <div class="muted" style="font-size:11px;margin-top:6px">Playstyle — pick the matching build in your build tool</div>
     ${p.play ? `<p><b>How to play:</b> ${esc(p.play)}</p>` : ""}
     ${opp && p.vs ? `<p><b>vs ${nm(opp)}:</b> ${esc(p.vs)}</p>` : ""}
+    ${p.opp2 && p.vs2 ? `<p><b>vs ${nm(p.opp2)}:</b> ${esc(p.vs2)}</p>` : ""}
     ${p.lane_why ? `<p class="muted">${esc(p.lane_why)}</p>` : ""}</div>`;
 }
 

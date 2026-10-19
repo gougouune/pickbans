@@ -108,6 +108,7 @@ def build_pack(kb_dir):
         "stats": {},
         "matchups": {},
     }
+    pack["items"] = build_items(kb_dir, version)
     stats_file = os.path.join(kb_dir, "stats.json")
     if os.path.exists(stats_file):  # real stats from tools/fetch_stats.py
         with open(stats_file, encoding="utf-8") as f:
@@ -117,6 +118,24 @@ def build_pack(kb_dir):
                     matchups_version=s["version"], matchups_at=s["fetched_at"],
                     matchups_rank=s.get("matchups_rank", {}), stats_rank=s.get("rank"))
     return pack
+
+
+def build_items(kb_dir, version):
+    """Item quiz entries, kept only if Riot still has that item under that name this patch."""
+    path = os.path.join(kb_dir, "items.txt")
+    if not os.path.exists(path):
+        return []
+    riot = net.get_json(f"{DDRAGON}/cdn/{version}/data/en_US/item.json")["data"]
+    out, dropped = [], []
+    for line in _lines(path):
+        iid, name, answer = [x.strip() for x in line.split("|", 2)]
+        if iid in riot and norm(riot[iid]["name"]) == norm(name):
+            out.append({"id": iid, "name": riot[iid]["name"], "answer": answer})
+        else:
+            dropped.append(name)
+    if dropped:
+        log.warning("item quiz: no longer in the game this patch: %s", dropped)
+    return out
 
 
 # ---------- Riot Data Dragon ----------
