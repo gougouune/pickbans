@@ -30,6 +30,7 @@ class LiveTracker:
         self.by_name = {norm(c["name"]): cid for cid, c in engine.champs.items()}
         self.by_name.update({norm(cid): cid for cid in engine.champs})
         self.hit6 = {}
+        self.roles_checked = False
 
     def champ_of(self, p):
         raw = p.get("rawChampionName", "")
@@ -53,8 +54,38 @@ class LiveTracker:
                 "level": p.get("level", 1),
                 "kills": (p.get("scores") or {}).get("kills", 0),
                 "dead": p.get("isDead", False),
+                "smite": any("smite" in ((p.get("summonerSpells") or {}).get(k) or {}).get("displayName", "").lower()
+                             for k in ("summonerSpellOne", "summonerSpellTwo")),
             })
         return out
+
+    def fix_roles(self, draft, data):
+        """Champ select only lets us GUESS enemy lanes. In game, Riot gives each player's real position
+        (and Smite = jungler). Correct the draft with that. Returns True if anything changed."""
+        from .draft import infer_roles
+        live_enemies = {p["champ"]: p for p in self.players(data) if not p["ally"] and p["champ"]}
+        enemies = [e for e in draft["enemies"] if e.get("champ")]
+        if not live_enemies or not enemies:
+            return False
+        before = {e["champ"]: e.get("role") for e in enemies}
+        known = {c: p["role"] for c, p in live_enemies.items() if p["role"]}
+        if len(set(known.values())) == len(known) and len(known) >= 4:  # real positions (ranked / draft)
+            self.roles_checked = True
+            for e in enemies:
+                if e["champ"] in known:
+                    e["role"], e["role_guessed"] = known[e["champ"]], False
+        else:  # positions missing (some modes): at least pin the Smite holder, re-guess the rest
+            junglers = [c for c, p in live_enemies.items() if p["smite"]]
+            if len(junglers) != 1:
+                return False  # no info yet: try again on the next poll
+            self.roles_checked = True
+            for e in enemies:
+                if e["champ"] == junglers[0]:
+                    e["role"], e["role_guessed"] = "JUNGLE", False
+                elif e.get("role_guessed", True):
+                    e["role"] = None
+            infer_roles(enemies, self.engine.role_rate)
+        return any(before[e["champ"]] != e.get("role") for e in enemies)
 
     def draft_from_live(self, data):
         """If PICKBANS was opened mid-game, rebuild a draft from the live player list."""

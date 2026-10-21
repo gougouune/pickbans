@@ -213,7 +213,11 @@ class App:
             self.tracker = live.LiveTracker(self.engine)
         if data and not self.last_draft:
             self.last_draft = self.tracker.draft_from_live(data)  # PICKBANS opened mid-game
-        if self.last_draft and self.state.get("status") != "assessment":
+        roles_fixed = bool(data and self.last_draft and not self.tracker.roles_checked
+                           and self.tracker.fix_roles(self.last_draft, data))
+        if roles_fixed:
+            log.info("enemy lanes corrected from the live game")
+        if self.last_draft and (roles_fixed or self.state.get("status") != "assessment"):
             self.show_assessment()
         if data and self.last_draft:
             self.set(live=self.tracker.update(data, self.last_draft))
