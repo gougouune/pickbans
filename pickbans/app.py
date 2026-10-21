@@ -26,6 +26,12 @@ IN_GAME = {"GameStart", "InProgress", "Reconnect"}
 HOME_CACHE = os.path.join(paths.USER_DIR, "home.json")
 
 
+def ui_stamp():
+    """Changes whenever the UI files change, so the window never shows a stale cached interface."""
+    m = max(os.path.getmtime(os.path.join(paths.WEB_DIR, f)) for f in ("index.html", "app.js", "style.css"))
+    return f"{__version__}-{int(m)}"
+
+
 def _load_home_cache():
     try:
         with open(HOME_CACHE, encoding="utf-8") as f:
@@ -275,12 +281,27 @@ def make_handler(app):
             body = json.dumps(obj).encode()
             self.send_response(200)
             self.send_header("Content-Type", "application/json")
-            self.send_header("Cache-Control", "no-store")
             self.send_header("Content-Length", str(len(body)))
             self.end_headers()
             self.wfile.write(body)
 
+        def end_headers(self):
+            self.send_header("Cache-Control", "no-store")  # an updated app must never show the old UI
+            super().end_headers()
+
         def do_GET(self):
+            if self.path == "/" or self.path.startswith("/?") or self.path.startswith("/index.html"):
+                stamp = ui_stamp()
+                with open(os.path.join(paths.WEB_DIR, "index.html"), encoding="utf-8") as f:
+                    html = f.read().replace('href="style.css"', f'href="style.css?v={stamp}"').replace(
+                        'src="app.js"', f'src="app.js?v={stamp}"')
+                body = html.encode("utf-8")
+                self.send_response(200)
+                self.send_header("Content-Type", "text/html; charset=utf-8")
+                self.send_header("Content-Length", str(len(body)))
+                self.end_headers()
+                self.wfile.write(body)
+                return
             if self.path.startswith("/api/state"):
                 return self._json(app.snapshot())
             if self.path.startswith("/api/champs"):
@@ -373,12 +394,12 @@ def main():
         if existing:
             log.info("already running on %s — just opening its window", existing)
             if not args.no_window:
-                open_window(existing)
+                open_window(f"{existing}?v={ui_stamp()}")
             return
     app = App()
     server = start_server(args.port)
     server.RequestHandlerClass = make_handler(app)
-    url = f"http://127.0.0.1:{server.server_address[1]}/"
+    url = f"http://127.0.0.1:{server.server_address[1]}/?v={ui_stamp()}"
     log.info("PICKBANS %s on %s (exe: %s)", __version__, url, sys.executable)
     threading.Thread(target=server.serve_forever, daemon=True).start()
     if args.demo:
