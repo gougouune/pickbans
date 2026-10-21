@@ -27,16 +27,21 @@ by_name.update({norm(cid): cid for cid in roster})
 key_to_id = {c["key"]: cid for cid, c in roster.items()}
 
 old = {}
+PREV = None
 FILL_ONLY = False
+MIN_PAIR_GAMES = 200   # below this, a new-patch matchup is noise: use last patch's number instead
 if os.path.exists(OUT) and "--fresh" not in sys.argv:
     with open(OUT, encoding="utf-8") as f:
         old = json.load(f)
     if old.get("version") != version:
+        PREV = old  # previous patch: fills the gaps while the new patch has few games
         old = {}
 
 # --max-age-days N: within the same patch, only refetch everything when the stats are older than N days
 if "--max-age-days" in sys.argv and old:
     days = float(sys.argv[sys.argv.index("--max-age-days") + 1])
+    if old.get("thin"):
+        days = min(days, 1)  # early in a patch: refresh daily until the new numbers are solid
     age = (time.time() - old.get("fetched_at", 0)) / 86400
     if old.get("rank") != RANK:
         old = dict(old, fetched_at=0)  # rank changed: redo everything
@@ -47,6 +52,7 @@ if "--max-age-days" in sys.argv and old:
         print(f"Stats are {age:.1f} days old (< {days}) for patch {version}: nothing to do")
         sys.exit(0)
     if age >= days:
+        PREV = old  # refetch everything, but keep these numbers wherever the fresh ones are thin
         old = {}
     else:
         FILL_ONLY = True  # same patch, recent: keep tiers as they are, just fetch the missing tables
@@ -124,6 +130,46 @@ with ThreadPoolExecutor(3) as pool:
         if done2 % 25 == 0:
             print(f"  {done2}/{len(jobs2)}")
             save()
+# ---- early in a patch OP.GG has few games: keep last patch's numbers where the new ones are too thin ----
+THIN = old.get("thin", False) if FILL_ONLY else False
+if PREV:
+    def merge_tables(new, prev_tables):
+        kept = total = 0
+        for role, champs in prev_tables.items():
+            for cid, table in champs.items():
+                cur = new.setdefault(role, {}).setdefault(cid, {})
+                for opp, (games, wins) in table.items():
+                    total += 1
+                    if cur.get(opp, [0, 0])[0] < MIN_PAIR_GAMES:
+                        cur[opp] = [games, wins]
+                        kept += 1
+        return kept, total
+
+    def merge_meta(new, prev_meta):
+        kept = 0
+        for role, champs in prev_meta.items():
+            for cid, st in champs.items():
+                cur = new.setdefault(role, {}).get(cid)
+                if not cur or cur.get("play", 0) < 0.3 * st.get("play", 0):
+                    new[role][cid] = st
+                    kept += 1
+        return kept
+
+    k1, t1 = merge_tables(matchups, PREV.get("matchups", {}))
+    k2, _ = merge_tables(matchups_rank, PREV.get("matchups_rank", {}))
+    k3 = merge_meta(rank_meta, PREV.get("meta", {}))
+    THIN = t1 > 0 and k1 / t1 > 0.3
+    print(f"New patch: kept {k1}/{t1} matchups, {k2} rank head-to-heads and {k3} lane stats from patch {PREV.get('version')}"
+          f"{' (still thin: will refresh daily)' if THIN else ''}")
+
+
+def save():  # noqa: F811  (final save also records whether the data is still thin)
+    with open(OUT, "w", encoding="utf-8") as f:
+        json.dump({"version": version, "fetched_at": fetched_at, "source": "op.gg", "rank": RANK, "thin": THIN,
+                   "meta": rank_meta, "base_meta": base_meta, "matchups": matchups,
+                   "matchups_rank": matchups_rank, "rank_done": rank_done}, f)
+
+
 save()
 pairs = sum(len(t) for r in matchups.values() for t in r.values())
 rpairs = sum(len(t) for r in matchups_rank.values() for t in r.values())
