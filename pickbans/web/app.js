@@ -20,7 +20,7 @@ async function poll() {
   try {
     const s = await (await fetch("/api/state")).json();
     fails = 0;
-    if (s.seq !== lastSeq) {
+    if (s.seq !== lastSeq && !(document.activeElement && document.activeElement.id === "poolq")) {
       lastSeq = s.seq;
       LAST = s;
       render(s);
@@ -88,7 +88,7 @@ function idle(s) {
   const busy = { "In queue…": 1, "Match found!": 1, "In lobby — queue up!": 1 }[s.message] ? `<span class="statusline">${esc(s.message)}</span>` : "";
   let html = `<div class="home-head">${p && p.name ? `<b>Hi ${esc(p.name)}</b>${p.main_role ? ` <span class="muted">· mostly ${ROLE[p.main_role] || p.main_role}</span>` : ""}` : "<b>Welcome</b>"}${busy}</div>`;
   if (!h) {
-    return html + `<div class="muted hint">Open League once and your recent games and matchup notebook show up here.</div>` + itemQuiz();
+    return html + `<div class="muted hint">Open League once and your recent games, pool and matchup notebook show up here.</div>` + myPool(s) + itemQuiz();
   }
   if (h.recent.length) {
     const wins = h.recent.filter((g) => g.win).length;
@@ -96,10 +96,55 @@ function idle(s) {
       `<div class="rg ${g.win ? "w" : "l"}" title="${g.k}/${g.d}/${g.a} · ${ago(g.t)} ago">${img(g.champ)}
         <div class="rvs">${g.vs ? img(g.vs) : ""}</div><div class="rk">${g.k}/${g.d}/${g.a}</div></div>`).join("") + `</div>`;
   }
+  html += myPool(s);
   if (h.facts.length) html += factCard(h.facts[factIdx % h.facts.length]);
   html += itemQuiz();
   if (h.pool.length) html += notebook(h);
   return html;
+}
+
+// ---------- My pool: what the app detected + your changes ----------
+let poolRole = null;
+let poolAdd = false;
+let poolQuery = "";
+function setPoolRole(r) { poolRole = r; poolAdd = false; rerender(); }
+function togglePoolAdd() { poolAdd = !poolAdd; poolQuery = ""; rerender(); setTimeout(() => document.getElementById("poolq")?.focus(), 0); }
+function poolSearch(v) { poolQuery = v; const el = document.getElementById("poolres"); if (el) el.innerHTML = poolResults(); }
+async function poolEdit(action, champ) {
+  await fetch("/api/pool", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ action, role: poolRole, champ }) });
+  poolAdd = false;
+  lastSeq = -1;  // redraw with the new pool on the next poll
+}
+function poolResults() {
+  const q = poolQuery.trim().toLowerCase();
+  if (!q) return `<div class="muted" style="font-size:12px">Type a champion name…</div>`;
+  const inPool = new Set(((LAST.pool || {}).roles || {})[poolRole]?.map((e) => e.id) || []);
+  return Object.keys(CH).filter((id) => !inPool.has(id) && CH[id].name.toLowerCase().includes(q)).slice(0, 8)
+    .map((id) => `<button class="padd" onclick="poolEdit('add','${id}')">${img(id)} ${nm(id)}</button>`).join("") || `<div class="muted" style="font-size:12px">No match.</div>`;
+}
+
+function myPool(s) {
+  const pool = s.pool;
+  if (!pool) return "";
+  const main = (s.profile && s.profile.main_role) || "UTILITY";
+  if (!poolRole) poolRole = main;
+  const tabs = ["TOP", "JUNGLE", "MIDDLE", "BOTTOM", "UTILITY"].map((r) =>
+    `<div class="ptab ${r === poolRole ? "on" : ""}" onclick="setPoolRole('${r}')">${ROLE[r]} <span>${(pool.roles[r] || []).length}</span></div>`).join("");
+  const list = (pool.roles[poolRole] || []).map((e) =>
+    `<div class="pchamp ${e.source}" title="${esc(e.why)}">${img(e.id)}<div class="pname">${nm(e.id)}</div>
+      <div class="pwhy">${e.source === "added" ? "added" : e.games ? `${e.games} games` : esc(e.why)}</div>
+      <button class="px" title="Remove from my pool" onclick="poolEdit('remove','${e.id}')">✕</button></div>`).join("");
+  const removed = (pool.removed[poolRole] || []);
+  const rem = removed.length ? `<div class="premoved">Removed: ${removed.map((id) =>
+    `<a onclick="poolEdit('reset','${id}')" title="Put back">${nm(id)} ↺</a>`).join(" · ")}</div>` : "";
+  const add = poolAdd
+    ? `<div class="padd-box"><input id="poolq" placeholder="Champion name" oninput="poolSearch(this.value)" value="${esc(poolQuery)}"><div id="poolres">${poolResults()}</div></div>`
+    : "";
+  return `<h2>My pool <small>recs only come from here</small></h2><div class="nb">
+    <div class="ptabs">${tabs}</div>
+    <div class="pgrid">${list || `<div class="muted" style="font-size:12px">Nothing detected for ${ROLE[poolRole]}.</div>`}
+      <button class="pchamp padd-btn" onclick="togglePoolAdd()">${poolAdd ? "×" : "+"}<div class="pname">${poolAdd ? "Close" : "Add"}</div></button></div>
+    ${add}${rem}</div>`;
 }
 
 // ---------- item quiz: "what does this item do?" ----------
@@ -230,11 +275,14 @@ function champSelect(s) {
   let html = banner + teams + chips;
   if (picking && banPhase) html += `<div class="bans-rec">${section("Ban recs", r.bans, "Nothing scary to ban for you.", "", { noGrade: true })}</div>`;
   if (picking) {
-    html += section("Comfy picks", r.comfy, "No comfort champs available for this role.", "what you play");
-    html += section("Ideal picks", r.ideal, "No picks available.", "you + both teams + bans");
+    const noPool = r.pool_size === 0
+      ? `You don't have champions for ${ROLE[r.role] || r.role} in your pool yet — add some on the home screen (My pool).`
+      : `All your ${ROLE[r.role] || r.role} champions are banned or taken.`;
+    html += section("Your picks", r.picks, noPool, "from your pool, for this draft");
     const opps = (r.opponents || []).map(nm).join(" + ");
-    html += section("Lane counter", r.counter, opps ? `No strong counter to ${opps} — go comfy.` : "Waiting for your lane opponent to lock…", opps ? `vs ${opps}` : "");
-    if (r.cheese.length) html += section("Cheese ?", r.cheese, "", "oh btw");
+    html += section("Lane counter", r.counter, opps ? `None of your champions counter ${opps} — play safe early.` : "Waiting for your lane opponent to lock…", opps ? `vs ${opps} · your pool` : "your pool");
+    if (r.try && r.try.length) html += `<div class="try-sec">${section("Try this", r.try, "", "not in your pool")}</div>`;
+    if (r.cheese.length) html += `<div class="try-sec">${section("Cheese ?", r.cheese, "", "oh btw")}</div>`;
   }
   if (r.my_pick) html += myPick(r.my_pick, r.opponent, !!me.champ);
   if (s.assessment) html += `<h2>Match assessment</h2>` + assessmentBody(s.assessment, null);

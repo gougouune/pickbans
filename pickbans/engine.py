@@ -336,7 +336,11 @@ class Engine:
                 "tier": tier, "reasons": reasons[:3]}
 
     # ---------- the main call ----------
-    def recommend(self, draft, profile):
+    def recommend(self, draft, profile, pool=None):
+        """Recommendations from YOUR pool. pool = pickbans.pool.build(...); detected-only if None."""
+        from . import pool as poolmod
+        if pool is None:
+            pool = poolmod.build(self, profile, {"add": {r: [] for r in ROLES}, "remove": {r: [] for r in ROLES}})
         role = draft.get("my_role") or profile.main_role() or "MIDDLE"
         allies = [a["champ"] for a in draft["allies"] if a["champ"] and not a["is_me"]]
         hovers = [a["hover"] for a in draft["allies"] if a["hover"] and not a["is_me"]]
@@ -350,19 +354,16 @@ class Engine:
         ctx = {"role": role, "profile": profile, "allies": allies, "hovers": hovers, "opp": opp, "opp2": opp2,
                "ep": self.enemy_profile(enemies), "no_profile": no_profile}
 
-        pool = [cid for cid in self.champs if cid not in taken and profile.owns(cid) and self.role_ok(cid, role, profile)]
-        scored = {cid: self.score(cid, ctx) for cid in pool}
+        mine = poolmod.ids(pool, role)
+        available = [c for c in mine if c not in taken and profile.owns(c)]
+        scored = {cid: self.score(cid, ctx) for cid in available}
         by = lambda key: sorted(scored.values(), key=key, reverse=True)
+        lane_first = lambda r: dict(r, reasons=[r["lane_why"]] + [x for x in r["reasons"] if x != r["lane_why"]][:1]) if r["lane_why"] else r
 
-        if no_profile:
-            comfy = by(lambda r: r["parts"]["meta"] * 0.5 + (0.5 if self.champs[r["id"]]["difficulty"] == 1 else 0) + r["score"] * 0.2)[:3]
-        else:
-            comfy = [r for r in by(lambda r: r["parts"]["comfort"]) if r["parts"]["comfort"] > 0.05][:3]
-        ideal = by(lambda r: r["score"])[:3]
+        picks = by(lambda r: r["score"])[:3]
         counter = []
         if opp or opp2:
-            counter = [dict(r, reasons=[r["lane_why"]] + [x for x in r["reasons"] if x != r["lane_why"]][:1] if r["lane_why"] else r["reasons"])
-                       for r in by(lambda r: r["parts"]["lane"] * 0.6 + r["parts"]["comfort"] * 0.2 + r["parts"]["meta"] * 0.2)
+            counter = [lane_first(r) for r in by(lambda r: r["parts"]["lane"] * 0.7 + r["score"] * 0.3)
                        if r["parts"]["lane"] > 0.55][:3]
 
         my_champ = me.get("champ")
@@ -371,15 +372,45 @@ class Engine:
             "role_guessed": not draft.get("my_role"),
             "opponent": opp,
             "opponents": [o for o in (opp, opp2) if o],
-            "comfy": comfy,
-            "ideal": ideal,
+            "pool_size": len(mine),
+            "pool_available": len(available),
+            "picks": picks,
             "counter": counter,
+            "try": self.try_this(role, ctx, taken, mine, profile, many=len(available) < 2),
             "cheese": self.cheese(role, ctx, taken, draft["bans"], profile),
-            "bans": self.ban_recs(role, draft, profile, comfy, hovers),
+            "bans": self.ban_recs(role, draft, profile, mine, hovers),
             "missing": self.missing(allies + ([my_champ] if my_champ else []), hovers + ([me.get("hover")] if me.get("hover") else [])),
             "enemy_tags": ctx["ep"]["tags"],
             "my_pick": self.my_pick(my_champ or me.get("hover"), opp, ctx) if (my_champ or me.get("hover")) else None,
         }
+
+    def try_this(self, role, ctx, taken, mine, profile, many=False):
+        """A champion you DON'T play that plays like the ones you do, is easy, and is good in this draft.
+        Never the main rec: 1 at most (3 when your pool is empty for this role)."""
+        from .pool import similarity
+        out = []
+        for cid in self.champs:
+            if cid in mine or cid in taken or not profile.owns(cid) or not self.role_ok(cid, role, profile):
+                continue
+            if self.champs[cid]["difficulty"] > 2:
+                continue
+            like, sim = None, 0.0
+            for p in mine:
+                v = similarity(self, cid, p)
+                if v > sim:
+                    like, sim = p, v
+            if mine and sim < 0.7:
+                continue
+            r = self.score(cid, ctx)
+            if r["score"] < (0.45 if many else 0.5):
+                continue
+            first = (f"You never played it, but it plays like your {self.champs[like]['name']}" if like
+                     else "Easy to pick up and good in this draft")
+            extra = [x for x in r["reasons"] if not x.startswith("You play") and x != "High mastery"][:1]
+            ease = ["Easy to pick up"] if self.champs[cid]["difficulty"] == 1 and like else []
+            out.append(dict(r, reasons=[first] + ease + extra, rank=r["score"] * 0.6 + sim * 0.4))
+        out.sort(key=lambda r: -r["rank"])
+        return out[:3 if many else 1]
 
     def cheese(self, role, ctx, taken, bans, profile):
         ep = ctx["ep"]
@@ -427,40 +458,44 @@ class Engine:
                 res.append(r)
         return res[:2]
 
-    def ban_recs(self, role, draft, profile, comfy, hovers):
+    def ban_recs(self, role, draft, profile, mine, hovers):
+        """What hurts the champions YOU play in this role. (Generic 'strong in your role' only if you have no pool.)"""
         banned = set(draft["bans"])
         picked = {a["champ"] for a in draft["allies"] if a["champ"]} | {e["champ"] for e in draft["enemies"] if e["champ"]}
-        protect = set(hovers) | {a["hover"] for a in draft["allies"] if a["hover"]} | {r["id"] for r in comfy}
+        protect = set(hovers) | {a["hover"] for a in draft["allies"] if a["hover"]} | set(mine)
         worst = dict(profile.worst_matchups())
-        pool_ids = [r["id"] for r in comfy]
         out = []
         for cid, c in self.champs.items():
             if cid in banned or cid in picked or cid in protect:
                 continue
             st = self.stat(cid, role)
-            in_lane = bool(st) or role in c["positions"][:2]
-            s, why = 0.0, None
-            if in_lane:
+            if not (st or role in c["positions"][:2]):
+                continue
+            s, why, hits = 0.0, None, 0
+            for p in mine:
+                real = self.pair(role, p, cid)
+                if real and real[0] <= 0.475:
+                    s += (0.5 - real[0]) * 8
+                    hits += 1
+                    if not why or real[0] < float(why[1]):
+                        why = (f"Your {self.champs[p]['name']} only wins {round(real[0] * 100)}% vs it", real[0])
+                elif not real and cid in self.champs[p].get("weak_vs", []):
+                    s += 0.15
+                    hits += 1
+                    why = why or (f"Counters your {self.champs[p]['name']}", 0.5)
+            if hits > 1 and why:
+                why = (why[0] + f" (+{hits - 1} more of yours)", why[1])
+            if cid in worst:
+                s += 0.6
+                why = (f"You lose to it ({round(worst[cid] * 100)}% wins)", 0)
+            if not mine:  # no pool yet: fall back to what's strong in the lane
                 tv = TIER_VALUE[self.tier(cid, role)]
                 s += 0.5 * tv
-                if st:
-                    s += min(0.15, st["pr"] * 1.5)  # popular = you'll actually face it
-                if tv >= 1.0:
-                    why = "S tier in your role" + (f" ({round(st['wr'] * 100)}% wins)" if st else "")
-                # how badly does it beat the champs you play?
-                for p in pool_ids:
-                    real = self.pair(role, p, cid)
-                    if real and real[0] <= 0.475:
-                        s += (0.5 - real[0]) * 6
-                        why = f"Your {self.champs[p]['name']} only wins {round(real[0] * 100)}% vs it"
-                    elif not real and cid in self.champs[p].get("weak_vs", []):
-                        s += 0.2
-                        why = why or f"Counters your {self.champs[p]['name']}"
-            if cid in worst:
-                s += 0.5
-                why = f"You lose to it ({round(worst[cid] * 100)}% wins)"
-            if s >= 0.5:
-                out.append({"id": cid, "score": round(s, 2), "reasons": [why or "Strong in your role"]})
+                why = why or ("S tier in this lane", 0) if tv >= 1.0 else why
+            if st and s > 0:
+                s += min(0.1, st["pr"] * 1.0)  # popular = you'll actually face it
+            if s >= 0.15 and why:
+                out.append({"id": cid, "score": round(s, 2), "reasons": [why[0]]})
         out.sort(key=lambda r: -r["score"])
         return out[:3]
 

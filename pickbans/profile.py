@@ -161,6 +161,20 @@ class Profile:
     def vs_of(self, game_id):
         return next((h.get("vs") for h in self.history if h.get("game_id") == game_id), None)
 
+    def to_cache(self):
+        return {"name": self.name, "mastery": self.mastery, "games": self.games, "role_counts": self.role_counts,
+                "recent": self.recent}
+
+    @classmethod
+    def from_cache(cls, d):
+        p = cls()
+        p.name = d.get("name")
+        p.mastery = d.get("mastery") or {}
+        p.games = d.get("games") or {}
+        p.role_counts = d.get("role_counts") or {}
+        p.recent = d.get("recent") or []
+        return p
+
     def to_json(self):
         top = sorted(self.mastery.items(), key=lambda x: -x[1])[:10]
         return {"name": self.name, "main_role": self.main_role(), "pool": [c for c, _ in top], "logged_games": len(self.history)}

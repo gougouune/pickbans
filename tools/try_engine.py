@@ -28,14 +28,14 @@ for t, phase, s in demo.timeline(key_of):
     r = eng.recommend(d, prof)
     en = [e["champ"] for e in d["enemies"] if e["champ"]]
     print(f"\n[{t:5.1f}s] {d['phase']} action={d['my_action']} bans={len(d['bans'])} enemies={en}")
-    print("  comfy :", fmt(r["comfy"]))
-    print("  ideal :", fmt(r["ideal"]))
+    print("  picks :", fmt(r["picks"]), "| pool", r["pool_available"], "/", r["pool_size"])
+    print("  try   :", fmt(r["try"]), [x["reasons"][0] for x in r["try"]])
     print("  counter:", fmt(r["counter"]), "| opp:", r["opponent"])
     print("  cheese:", fmt(r["cheese"]), [c["reasons"][0] for c in r["cheese"]])
     print("  bans  :", ", ".join(f"{name(b['id'])} ({b['reasons'][0]})" for b in r["bans"]))
     print("  missing:", [m["label"] for m in r["missing"] if m["missing"]], "| enemy:", r["enemy_tags"])
-    if r["ideal"]:
-        print("  why ideal #1:", r["ideal"][0]["reasons"], r["ideal"][0]["parts"])
+    if r["picks"]:
+        print("  why pick #1:", r["picks"][0]["reasons"], r["picks"][0]["parts"])
 
 print("\n=== ASSESSMENT")
 import json  # noqa: E402

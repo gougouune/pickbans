@@ -12,6 +12,7 @@ import webbrowser
 from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer
 
 from . import __version__, demo, live, net, paths
+from . import pool as poolmod
 from .assess import assess
 from .draft import infer_roles, parse_session
 from .engine import Engine
@@ -63,9 +64,15 @@ class App:
         self.state = {"status": "starting", "seq": 0, "message": "Starting…", "version": __version__,
                       "patch": self.pack["version"], "meta_source": self.pack.get("meta_source", "baseline"),
                       "stats_rank": self.pack.get("stats_rank")}
-        cached = _load_home_cache()  # last home screen, so it's there even with League closed
-        if cached:
-            self.state.update(home=cached.get("home"), profile=cached.get("profile"))
+        self.overrides = poolmod.load_overrides()
+        self.last_session = None
+        cached = _load_home_cache()  # what we knew last time, so pool + home work with League closed
+        if cached and cached.get("profile_data"):
+            self.profile = Profile.from_cache(cached["profile_data"])
+            self.state.update(home=build_home(self.engine, self.profile, self.current_pool()),
+                              profile=self.profile.to_json(), pool=self.current_pool())
+        else:
+            self.state.update(pool=self.current_pool())
 
     # ---------- state ----------
     def set(self, **kw):
@@ -160,18 +167,27 @@ class App:
                          **({"profile": self.profile.to_json()} if self.profile.name else {}))
             time.sleep(1)
 
+    def current_pool(self):
+        return poolmod.build(self.engine, self.profile, self.overrides)
+
     def show_home(self, p):
-        """Rebuild the home screen from a real profile and remember it on disk."""
-        home = build_home(self.engine, p)
-        if not home:
-            return
-        profile = p.to_json()
-        self.set(home=home, profile=profile)
-        try:
-            with open(HOME_CACHE, "w", encoding="utf-8") as f:
-                json.dump({"home": home, "profile": profile}, f)
-        except OSError:
-            pass
+        """Rebuild home + pool from a real profile and remember what was detected."""
+        pool = poolmod.build(self.engine, p, self.overrides)
+        self.set(home=build_home(self.engine, p, pool), profile=p.to_json(), pool=pool)
+        if (p.mastery or p.recent) and not self.demo_steps:
+            try:
+                with open(HOME_CACHE, "w", encoding="utf-8") as f:
+                    json.dump({"profile_data": p.to_cache()}, f)
+            except OSError:
+                pass
+
+    def edit_pool(self, action, role, champ):
+        if self.demo_steps is not None:
+            raise ValueError("pool can't be edited during the demo")
+        self.overrides = poolmod.edit(self.overrides, action, role, champ)
+        self.show_home(self.profile)
+        if self.state.get("status") == "champ_select" and self.last_session:
+            self.on_session(self.last_session)  # recs follow your pool right away
 
     def load_profile(self, lcu):
         """Runs in the background — match history can take 10+ s on a slow client."""
@@ -188,7 +204,7 @@ class App:
             if added and not self.demo_steps:
                 log.info("matchup notebook: %d games added", added)
                 self.show_home(p)
-            n = refresh_pool(self.pack, pool_of(self.engine, p))  # plan B if the published pack is late
+            n = refresh_pool(self.pack, pool_of(self.engine, p, poolmod.build(self.engine, p, self.overrides)))  # plan B if the published pack is late
             if n and not self.demo_steps:
                 log.info("refreshed %d matchup tables for your champions from OP.GG", n)
                 self.show_home(p)
@@ -201,7 +217,8 @@ class App:
         d = parse_session(s, self.engine.key_to_id)
         infer_roles(d["enemies"], self.engine.role_rate)
         self.last_draft = d
-        recs = self.engine.recommend(d, self.profile)
+        self.last_session = s
+        recs = self.engine.recommend(d, self.profile, self.current_pool())
         extra = {}
         if d["phase"] == "FINALIZATION":
             extra["assessment"] = assess(self.engine, d, self.profile)
@@ -240,7 +257,8 @@ class App:
         self.last_draft = None
         self.demo_i = 0
         self.set(demo=True, status="idle", message="Demo: champ select starts in a few seconds…",
-                 profile=self.profile.to_json(), home=build_home(self.engine, self.profile))
+                 profile=self.profile.to_json(), home=build_home(self.engine, self.profile, self.current_pool()),
+                 pool=self.current_pool())
 
     def stop_demo(self):
         self.demo_steps = None
@@ -248,10 +266,9 @@ class App:
         self.tracker = None
         self.profile = getattr(self, "saved_profile", self.profile)
         self.last_draft = None
-        cached = _load_home_cache() or {}
-        real = build_home(self.engine, self.profile)
         self.set(demo=False, status="starting", message="", assessment=None, draft=None, recs=None, live=None,
-                 profile=self.profile.to_json() if real else cached.get("profile"), home=real or cached.get("home"))
+                 profile=self.profile.to_json(), home=build_home(self.engine, self.profile, self.current_pool()),
+                 pool=self.current_pool())
 
     def tick_demo(self):
         el = time.time() - self.demo_t0
@@ -319,6 +336,15 @@ def make_handler(app):
             return super().do_GET()
 
         def do_POST(self):
+            if self.path == "/api/pool":
+                try:
+                    body = json.loads(self.rfile.read(int(self.headers.get("Content-Length") or 0)) or b"{}")
+                    if body.get("champ") not in app.engine.champs:
+                        raise ValueError("unknown champion")
+                    app.edit_pool(body.get("action"), body.get("role"), body["champ"])
+                    return self._json({"ok": True})
+                except Exception as e:
+                    return self._json({"ok": False, "error": str(e)})
             if self.path == "/api/demo/start":
                 app.start_demo()
             elif self.path == "/api/demo/stop":
