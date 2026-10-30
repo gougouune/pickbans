@@ -104,7 +104,9 @@ def assess(engine, draft, profile):
 
     gameplan = None
     if mine:
-        gameplan = {"champ": mine, "styles": ch[mine]["styles"], "play": ch[mine].get("play", ""), "build": engine.build(mine, role)}
+        build = engine.build(mine, role)
+        gameplan = {"champ": mine, "styles": ch[mine]["styles"], "play": ch[mine].get("play", ""), "build": build,
+                    "situational": engine.situational(mine, enemies, build)}
 
     return {"headline": headline, "plan": plan, "tags": tags[:4], "matchups": matchups, "gameplan": gameplan,
             "lane": lane, "traps": traps[:4], "allies": allies, "enemies": enemies}

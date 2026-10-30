@@ -1,0 +1,42 @@
+# Situational items: shown UNDER the normal build in the in-game Game plan ("For this game"). Never imported.
+# Written by hand (not from stats). Items are checked against Riot's data at build time; retired items get dropped.
+#
+# Champion groups used by the triggers (Riot ids):
+@heal: Soraka, Aatrox, DrMundo, Vladimir, Warwick, Yuumi, Sona, Swain, Briar, Nami, Milio, Sylas, Fiddlesticks, Illaoi, Olaf, Taric, Seraphine, Renata, Ivern, Nilah, Senna
+@shield: Lulu, Janna, Karma, Seraphine, Milio, Renata, Taric, Yuumi, Orianna, Sona, Morgana, Ivern
+@stealth: Evelynn, Twitch, Akali, Shaco, Rengar, Khazix, Vayne, MonkeyKing, Neeko, Talon, Pyke, Senna, Qiyana
+@crit: Jinx, Caitlyn, Tryndamere, Yasuo, Yone, Ashe, MissFortune, Jhin, Tristana, Xayah, Sivir, Draven, Kalista, Zeri, Yunara, Aphelios, Samira, Nilah, Lucian, Smolder
+#
+# trigger | who it's for: marksman, mage, assassin, bruiser, tank, enchanter (or all) | item id | item name | why (short)
+heal | marksman | 3033 | Mortal Reminder | cuts their healing
+heal | assassin, bruiser | 6609 | Chempunk Chainsword | cuts their healing
+heal | mage, enchanter | 3165 | Morellonomicon | cuts their healing
+heal | tank | 3075 | Thornmail | cuts their healing when they hit you
+ad_heavy | mage | 3157 | Zhonya's Hourglass | armor + a way to dodge their burst
+ad_heavy | bruiser, assassin | 6333 | Death's Dance | armor and it softens their hits
+ad_heavy | tank | 3110 | Frozen Heart | lots of armor, slows their attacks
+ad_heavy | mage, assassin, bruiser, tank, enchanter | 3047 | Plated Steelcaps | boots: they deal mostly physical damage
+ap_heavy | mage | 3102 | Banshee's Veil | magic resist + blocks a spell
+ap_heavy | bruiser, assassin | 3156 | Maw of Malmortius | saves you from magic burst
+ap_heavy | marksman | 3091 | Wit's End | magic resist while still doing damage
+ap_heavy | tank | 2504 | Kaenic Rookern | big shield against magic damage
+ap_heavy | mage, assassin, bruiser, tank, enchanter | 3111 | Mercury's Treads | boots: magic resist, shorter stuns
+tanks | marksman, assassin | 3036 | Lord Dominik's Regards | hits harder on high-health targets
+tanks | bruiser | 3071 | Black Cleaver | shreds their armor
+tanks | mage | 3135 | Void Staff | your magic damage goes through their resist
+burst | marksman | 6673 | Immortal Shieldbow | a shield when they jump on you
+burst | bruiser | 3053 | Sterak's Gage | a big shield when you drop low
+burst | assassin | 3814 | Edge of Night | blocks the spell that starts their combo
+burst | mage | 3157 | Zhonya's Hourglass | go untargetable when they jump on you
+burst | enchanter | 3190 | Locket of the Iron Solari | shields your whole team from burst
+cc | marksman | 3139 | Mercurial Scimitar | removes a stun so you can escape
+cc | mage | 3102 | Banshee's Veil | blocks the spell that locks you down
+cc | assassin | 3814 | Edge of Night | blocks the spell that locks you down
+cc | enchanter | 3222 | Mikael's Blessing | removes a stun from your carry
+cc | mage, assassin, bruiser, tank, enchanter | 3111 | Mercury's Treads | boots: stuns last less on you
+dive | enchanter | 3222 | Mikael's Blessing | saves your carry when they get jumped
+dive | tank | 3190 | Locket of the Iron Solari | shields your team when they dive
+dive | marksman | 3026 | Guardian Angel | a second life when they dive you
+shields | assassin, bruiser | 6695 | Serpent's Fang | weakens their shields
+crit | tank | 3143 | Randuin's Omen | less damage from crits
+stealth | all | 2055 | Control Ward | reveals invisible enemies: keep one on you

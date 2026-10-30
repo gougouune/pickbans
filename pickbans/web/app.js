@@ -310,6 +310,13 @@ function buildBlock(b) {
   return `<div class="build">${row("Start", b.start)}${row("Core", b.core)}${row("Boots", b.boots)}${row("Then", b.later)}</div>`;
 }
 
+function situationalBlock(list) {
+  if (!list || !list.length) return "";
+  return `<div class="situ"><div class="situ-head">For this game</div>${list.map((x) =>
+    `<div class="situ-row"><img class="item" src="${x.img}" alt="${esc(x.name)}" title="${esc(x.name)}"><div><b>${esc(x.name)}</b>
+      <div class="muted">${x.champs.length ? x.champs.map(nm).join(", ") + ": " : ""}${esc(x.why)}</div></div></div>`).join("")}</div>`;
+}
+
 function skillsBlock(b) {
   if (!b.skills || !b.skills.length) return "";
   const cells = b.skills.map((k, i) => `<div class="sk ${esc(k)}"><span>${i + 1}</span><b>${esc(k)}</b></div>`).join("");
@@ -367,7 +374,9 @@ function assessmentBody(a, live) {
   if (gp) {
     const b = gp.build;
     h += `<h2>Game plan <small>${nm(gp.champ)}</small></h2><div class="gameplan">
-      ${b ? buildBlock(b) + skillsBlock(b) : `<div class="muted">No build known for this champion yet.</div>`}
+      ${b ? buildBlock(b) : `<div class="muted">No build known for this champion yet.</div>`}
+      ${situationalBlock(gp.situational)}
+      ${b ? skillsBlock(b) : ""}
       ${gp.play ? `<div class="gp-tip">${esc(gp.play)}</div>` : ""}</div>`;
   }
   h += `<div class="plan"><b>${esc(a.headline)}.</b> ${esc(a.plan)}</div>${tags ? `<div class="chips">${tags}</div>` : ""}`;

@@ -109,6 +109,7 @@ def build_pack(kb_dir):
         "matchups": {},
     }
     pack["items"] = build_items(kb_dir, version)
+    pack["situational"] = build_situational(kb_dir, version)
     pack["rune_icons"] = {str(r["id"]): r["icon"] for style in net.get_json(f"{DDRAGON}/cdn/{version}/data/en_US/runesReforged.json")
                           for slot in style["slots"] for r in slot["runes"]}
     stats_file = os.path.join(kb_dir, "stats.json")
@@ -121,6 +122,28 @@ def build_pack(kb_dir):
                     matchups_rank=s.get("matchups_rank", {}), stats_rank=s.get("rank"), stats_thin=bool(s.get("thin")),
                     builds=s.get("builds", {}))
     return pack
+
+
+def build_situational(kb_dir, version):
+    """Situational item table + champion groups. Items Riot no longer has get dropped."""
+    path = os.path.join(kb_dir, "situational.txt")
+    if not os.path.exists(path):
+        return {"groups": {}, "rows": []}
+    riot = net.get_json(f"{DDRAGON}/cdn/{version}/data/en_US/item.json")["data"]
+    groups, rows, dropped = {}, [], []
+    for line in _lines(path):
+        if line.startswith("@"):
+            name, _, members = line[1:].partition(":")
+            groups[name.strip()] = [m.strip() for m in members.split(",") if m.strip()]
+            continue
+        trigger, who, iid, name, why = [x.strip() for x in line.split("|")]
+        if iid in riot and norm(riot[iid]["name"]) == norm(name):
+            rows.append({"trigger": trigger, "who": [w.strip() for w in who.split(",")], "id": iid, "name": riot[iid]["name"], "why": why})
+        else:
+            dropped.append(name)
+    if dropped:
+        log.warning("situational items no longer in the game: %s", dropped)
+    return {"groups": groups, "rows": rows}
 
 
 def build_items(kb_dir, version):

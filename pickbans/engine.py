@@ -525,6 +525,78 @@ class Engine:
             "prio": b["prio"],
         }
 
+    def item_class(self, cid):
+        """Which kind of item buyer this champion is, for the situational table."""
+        c = self.champs[cid]
+        tr, tags = c["traits"], c.get("tags", [])
+        crit = self.pack.get("situational", {}).get("groups", {}).get("crit", [])
+        if ("Marksman" in tags and c["range"] == "R") or (cid in crit and c["dmg"] != "AP"):
+            return "marksman"
+        if tr.get("SU", 0) >= 2:
+            return "enchanter"
+        if tr.get("FR", 0) >= 3:
+            return "tank"
+        if c["positions"][0] == "UTILITY" and ("Tank" in tags or tr.get("EN", 0) >= 3):
+            return "tank"  # engage / hook supports don't build like mages
+        if c["dmg"] == "AP":
+            return "mage"
+        return "assassin" if tr.get("BU", 0) >= 3 else "bruiser"
+
+    def enemy_triggers(self, enemies):
+        """What's notable about the enemy team, most important first: [(trigger, champions behind it)]."""
+        groups = self.pack.get("situational", {}).get("groups", {})
+        in_group = lambda g: [c for c in enemies if c in groups.get(g, [])]
+        with_trait = lambda k, n: [c for c in enemies if self.t(c, k) >= n]
+        mix = self.damage_mix(enemies)
+        out = []
+        if in_group("heal"):
+            out.append(("heal", in_group("heal")))
+        if len(enemies) >= 4 and mix["AP"] <= 1:
+            out.append(("ad_heavy", []))
+        if len(enemies) >= 4 and mix["AD"] <= 1:
+            out.append(("ap_heavy", []))
+        if len(with_trait("FR", 3)) >= 2:
+            out.append(("tanks", with_trait("FR", 3)))
+        if len(with_trait("BU", 3)) >= 2:
+            out.append(("burst", with_trait("BU", 3)))
+        if sum(self.t(c, "CC") for c in enemies) >= 9:
+            out.append(("cc", []))
+        if len(with_trait("DI", 3)) >= 2:
+            out.append(("dive", with_trait("DI", 3)))
+        if in_group("shield"):
+            out.append(("shields", in_group("shield")))
+        if in_group("crit"):
+            out.append(("crit", in_group("crit")))
+        if in_group("stealth"):
+            out.append(("stealth", in_group("stealth")))
+        return out
+
+    def situational(self, cid, enemies, build=None):
+        """Items for THIS game, on top of the normal build. Max 4 + a control ward, one pair of boots."""
+        table = self.pack.get("situational", {}).get("rows", [])
+        if not table or cid not in self.champs:
+            return []
+        who = self.item_class(cid)
+        v = self.pack["version"]
+        have = {str(i["id"]) for k in ("core", "boots") for i in (build or {}).get(k, [])}
+        out, seen, boots = [], set(), False
+        for trigger, champs in self.enemy_triggers(enemies):
+            for row in table:
+                if row["trigger"] != trigger or not ({"all", who} & set(row["who"])):
+                    continue
+                if row["id"] in seen or row["id"] in have:
+                    continue
+                is_boots = row["why"].startswith("boots:")
+                if is_boots and boots:
+                    continue
+                if len([x for x in out if x["id"] != "2055"]) >= 4 and row["id"] != "2055":
+                    continue
+                seen.add(row["id"])
+                boots = boots or is_boots
+                out.append({"id": row["id"], "name": row["name"], "why": row["why"], "trigger": trigger,
+                            "champs": champs[:3], "img": f"{DDRAGON}/cdn/{v}/img/item/{row['id']}.png"})
+        return out
+
     def my_pick(self, cid, opp, ctx):
         c = self.champs.get(cid)
         if not c:
