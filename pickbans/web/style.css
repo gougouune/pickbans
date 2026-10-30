@@ -200,3 +200,12 @@ h2 small a { color: var(--accent); cursor: pointer; }
 /* "Try this" & cheese: secondary, smaller */
 .try-sec .card { border-style: dashed; opacity: .9; }
 .try-sec h2 { font-size: 12px; }
+
+/* secondary section: did you know + item quiz */
+.extras { margin-top: 26px; padding: 4px 12px 12px; border: 1px dashed var(--line); border-radius: 12px; }
+.extras-label { font-size: 11px; color: var(--muted); margin: 6px 0 -8px; }
+.extras h2 { font-size: 11.5px; margin-top: 16px; }
+.extras .fact { background: transparent; border-color: var(--line); padding: 8px 10px; font-size: 13px; }
+.extras .qitem img { width: 34px; height: 34px; }
+.extras .quiz img { width: 26px; height: 26px; }
+.extras .qchoice { font-size: 12px; padding: 6px 9px; }

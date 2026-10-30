@@ -62,11 +62,16 @@ def _notebook(engine, profile, cid, role):
     rated = []
     for opp in opps:
         real = engine.pair(role, cid, opp)
-        if real and real[1] >= MIN_GAMES and opp in engine.champs:
+        if real and opp in engine.champs:
             rated.append((opp, real[0], real[1]))
+    # enough games = relative to how much this champion is played (rare picks never reach a fixed number)
+    enough = max(60, min(MIN_GAMES, 0.25 * max((x[2] for x in rated), default=0)))
+    rated = [x for x in rated if x[2] >= enough]
     rated.sort(key=lambda x: x[1])
     fmt = lambda x: {"vs": x[0], "wr": round(x[1], 3), "games": x[2]}
-    return {"role": role, "mine": rows, "worst": [fmt(x) for x in rated[:4]], "best": [fmt(x) for x in rated[::-1][:4]]}
+    worst = [fmt(x) for x in rated if x[1] <= 0.495][:4]
+    best = [fmt(x) for x in rated[::-1] if x[1] >= 0.505][:4]
+    return {"role": role, "mine": rows, "worst": worst, "best": best}
 
 
 def _facts(engine, profile, pool):

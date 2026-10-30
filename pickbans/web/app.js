@@ -88,7 +88,7 @@ function idle(s) {
   const busy = { "In queue…": 1, "Match found!": 1, "In lobby — queue up!": 1 }[s.message] ? `<span class="statusline">${esc(s.message)}</span>` : "";
   let html = `<div class="home-head">${p && p.name ? `<b>Hi ${esc(p.name)}</b>${p.main_role ? ` <span class="muted">· mostly ${ROLE[p.main_role] || p.main_role}</span>` : ""}` : "<b>Welcome</b>"}${busy}</div>`;
   if (!h) {
-    return html + `<div class="muted hint">Open League once and your recent games, pool and matchup notebook show up here.</div>` + myPool(s) + itemQuiz();
+    return html + `<div class="muted hint">Open League once and your recent games, pool and matchup notebook show up here.</div>` + myPool(s) + extras(itemQuiz());
   }
   if (h.recent.length) {
     const wins = h.recent.filter((g) => g.win).length;
@@ -97,9 +97,8 @@ function idle(s) {
         <div class="rvs">${g.vs ? img(g.vs) : ""}</div><div class="rk">${g.k}/${g.d}/${g.a}</div></div>`).join("") + `</div>`;
   }
   html += myPool(s);
-  if (h.facts.length) html += factCard(h.facts[factIdx % h.facts.length]);
-  html += itemQuiz();
   if (h.pool.length) html += notebook(h);
+  html += extras((h.facts.length ? factCard(h.facts[factIdx % h.facts.length]) : "") + itemQuiz());
   return html;
 }
 
@@ -192,6 +191,11 @@ function itemQuiz() {
   return `<h2>Item quiz <small>streak ${streak} · best ${best}</small></h2><div class="fact">
     <div class="qitem"><img src="${q.item.img}" alt=""><div><b>${esc(q.item.name)}</b><div class="muted">What does it do?</div></div></div>
     <div class="qchoices">${choices}</div>${after}</div>`;
+}
+
+// Fun stuff for the queue: visibly secondary to the pool and the matchups
+function extras(body) {
+  return body ? `<div class="extras"><div class="extras-label">Just for fun</div>${body}</div>` : "";
 }
 
 function factCard(f) {
