@@ -1,4 +1,5 @@
-"""Read-only connection to the League client (LCU API). PICKBANS never clicks, locks or bans anything."""
+"""Connection to the League client (LCU API). Reads only, except one thing: PICKBANS' own rune page.
+It never clicks, locks or bans anything, and never touches your own rune pages."""
 import logging
 import os
 import re
@@ -8,6 +9,7 @@ import urllib.error
 from . import net
 
 log = logging.getLogger("pickbans.lcu")
+RUNE_PAGE_NAME = "PICKBANS"
 
 _LOCKFILE_DIRS = [
     r"C:\Riot Games\League of Legends",
@@ -102,3 +104,30 @@ class LCU:
     def owned_ids(self):
         champs = self.get("/lol-champions/v1/owned-champions-minimal") or []
         return [c["id"] for c in champs if c.get("ownership", {}).get("owned")]
+
+    def send(self, method, path, body=None):
+        return net.send(method, self.base + path, body, timeout=8, auth=self.auth, insecure=True)
+
+    def import_runes(self, runes):
+        """Put runes in OUR page and select it. Your own pages are never changed or deleted.
+        Returns (ok, message)."""
+        try:
+            pages = self.get("/lol-perks/v1/pages") or []
+            mine = next((p for p in pages if p.get("name") == RUNE_PAGE_NAME and p.get("isEditable")), None)
+            if mine:
+                self.send("DELETE", f"/lol-perks/v1/pages/{mine['id']}")
+            else:
+                owned = (self.get("/lol-perks/v1/inventory") or {}).get("ownedPageCount")
+                used = sum(1 for p in pages if p.get("isEditable"))
+                if owned is not None and used >= owned:
+                    return False, "No free rune page: delete one of yours and PICKBANS will use its spot."
+            self.send("POST", "/lol-perks/v1/pages", {
+                "name": RUNE_PAGE_NAME, "primaryStyleId": runes["primary"], "subStyleId": runes["sub"],
+                "selectedPerkIds": runes["perks"], "current": True})
+            return True, f"Runes imported to the \"{RUNE_PAGE_NAME}\" page"
+        except urllib.error.HTTPError as e:
+            log.warning("rune import failed: %s", e)
+            return False, "The client refused the rune page."
+        except Exception as e:
+            log.warning("rune import failed: %s", e)
+            return False, "Couldn't reach the client to import runes."

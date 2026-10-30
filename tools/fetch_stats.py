@@ -47,7 +47,8 @@ if "--max-age-days" in sys.argv and old:
         old = dict(old, fetched_at=0)  # rank changed: redo everything
     age = (time.time() - old.get("fetched_at", 0)) / 86400
     missing = [(r, c) for r, lane in old.get("meta", {}).items() for c in lane
-               if c not in old.get("matchups", {}).get(r, {}) or c not in old.get("rank_done", {}).get(r, [])]
+               if c not in old.get("matchups", {}).get(r, {}) or c not in old.get("rank_done", {}).get(r, [])
+               or c not in old.get("builds", {}).get(r, {})]
     if age < days and not missing:
         print(f"Stats are {age:.1f} days old (< {days}) for patch {version}: nothing to do")
         sys.exit(0)
@@ -93,8 +94,10 @@ base_meta = old.get("base_meta") if FILL_ONLY else None
 base_meta = base_meta or json.loads(json.dumps(meta))   # Emerald+ lane list, kept as fallback
 matchups_rank = old.get("matchups_rank", {}) if FILL_ONLY else {}
 rank_done = old.get("rank_done", {}) if FILL_ONLY else {}
+builds = old.get("builds", {}) if FILL_ONLY else {}
 rank_meta = json.loads(json.dumps(old["meta"])) if FILL_ONLY else json.loads(json.dumps(base_meta))
-jobs2 = [(role, cid) for role, champs in base_meta.items() for cid in champs if cid not in rank_done.get(role, [])]
+jobs2 = [(role, cid) for role, champs in base_meta.items() for cid in champs
+         if cid not in rank_done.get(role, []) or cid not in builds.get(role, {})]
 print(f"Rank '{RANK}': {len(jobs2)} champion/lane stats to fetch")
 
 
@@ -110,7 +113,7 @@ def save():
     with open(OUT, "w", encoding="utf-8") as f:
         json.dump({"version": version, "fetched_at": fetched_at, "source": "op.gg", "rank": RANK,
                    "meta": rank_meta, "base_meta": base_meta, "matchups": matchups,
-                   "matchups_rank": matchups_rank, "rank_done": rank_done}, f)
+                   "matchups_rank": matchups_rank, "rank_done": rank_done, "builds": builds}, f)
 
 
 done2 = failed2 = 0
@@ -120,12 +123,14 @@ with ThreadPoolExecutor(3) as pool:
             failed2 += 1
             print("  FAILED", res)
         else:
-            stat, pairs = res
+            stat, pairs, build = res
+            builds.setdefault(role, {})[cid] = build
             if stat and stat["play"] >= 500:      # enough games at this rank to trust the lane numbers
                 rank_meta[role][cid] = stat
             if pairs:
                 matchups_rank.setdefault(role, {})[cid] = pairs
-            rank_done.setdefault(role, []).append(cid)
+            if cid not in rank_done.setdefault(role, []):
+                rank_done[role].append(cid)
         done2 += 1
         if done2 % 25 == 0:
             print(f"  {done2}/{len(jobs2)}")
@@ -158,6 +163,11 @@ if PREV:
     k1, t1 = merge_tables(matchups, PREV.get("matchups", {}))
     k2, _ = merge_tables(matchups_rank, PREV.get("matchups_rank", {}))
     k3 = merge_meta(rank_meta, PREV.get("meta", {}))
+    for role, champs in PREV.get("builds", {}).items():  # too few games on the new patch: keep the last build
+        for cid, b in champs.items():
+            cur = builds.setdefault(role, {}).get(cid)
+            if b and (not cur or cur.get("play", 0) < 50):
+                builds[role][cid] = b
     THIN = t1 > 0 and k1 / t1 > 0.3
     print(f"New patch: kept {k1}/{t1} matchups, {k2} rank head-to-heads and {k3} lane stats from patch {PREV.get('version')}"
           f"{' (still thin: will refresh daily)' if THIN else ''}")
@@ -167,7 +177,7 @@ def save():  # noqa: F811  (final save also records whether the data is still th
     with open(OUT, "w", encoding="utf-8") as f:
         json.dump({"version": version, "fetched_at": fetched_at, "source": "op.gg", "rank": RANK, "thin": THIN,
                    "meta": rank_meta, "base_meta": base_meta, "matchups": matchups,
-                   "matchups_rank": matchups_rank, "rank_done": rank_done}, f)
+                   "matchups_rank": matchups_rank, "rank_done": rank_done, "builds": builds}, f)
 
 
 save()

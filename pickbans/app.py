@@ -25,6 +25,17 @@ log = logging.getLogger("pickbans")
 
 IN_GAME = {"GameStart", "InProgress", "Reconnect"}
 HOME_CACHE = os.path.join(paths.USER_DIR, "home.json")
+SETTINGS_FILE = os.path.join(paths.USER_DIR, "settings.json")
+
+
+def load_settings():
+    settings = {"auto_runes": True}
+    try:
+        with open(SETTINGS_FILE, encoding="utf-8") as f:
+            settings.update(json.load(f))
+    except (OSError, ValueError):
+        pass
+    return settings
 
 
 def ui_stamp():
@@ -65,6 +76,9 @@ class App:
                       "patch": self.pack["version"], "meta_source": self.pack.get("meta_source", "baseline"),
                       "stats_rank": self.pack.get("stats_rank")}
         self.overrides = poolmod.load_overrides()
+        self.settings = load_settings()
+        self.state["settings"] = self.settings
+        self.imported = None  # champion whose runes were imported this champ select
         self.last_session = None
         cached = _load_home_cache()  # what we knew last time, so pool + home work with League closed
         if cached and cached.get("profile_data"):
@@ -159,6 +173,9 @@ class App:
             time.sleep(2)
         else:
             self.tracker = None
+            if self.imported or self.state.get("rune_import"):
+                self.imported = None
+                self.set(rune_import=None)
             if phase in POST_GAME:
                 self.profile_stale = True
             if self.state.get("status") != "assessment" or phase in ("Lobby", "Matchmaking", "ReadyCheck"):
@@ -218,6 +235,7 @@ class App:
         infer_roles(d["enemies"], self.engine.role_rate)
         self.last_draft = d
         self.last_session = s
+        locked = next((a["champ"] for a in d["allies"] if a["is_me"] and a["champ"]), None)
         recs = self.engine.recommend(d, self.profile, self.current_pool())
         extra = {}
         if d["phase"] == "FINALIZATION":
@@ -226,6 +244,30 @@ class App:
             if me.get("champ") and not self.demo_steps:
                 self.profile.log_game(d["game_id"], me["champ"], recs["role"], recs["opponent"])
         self.set(status="champ_select", in_select=True, draft=d, recs=recs, message="", live=None, **extra)
+        if locked and locked != self.imported and self.settings.get("auto_runes"):
+            self.import_runes(locked, recs["role"])
+
+    def set_setting(self, key, value):
+        self.settings[key] = value
+        with open(SETTINGS_FILE, "w", encoding="utf-8") as f:
+            json.dump(self.settings, f)
+        self.set(settings=dict(self.settings))
+
+    def import_runes(self, champ, role):
+        """Write the runes for `champ` to PICKBANS' own rune page (in the background: never blocks the draft)."""
+        build = self.engine.build(champ, role)
+        if not build:
+            return self.set(rune_import={"champ": champ, "ok": False, "msg": "No runes known for this champion yet."})
+        self.imported = champ
+        if self.demo_steps is not None:
+            return self.set(rune_import={"champ": champ, "ok": True, "msg": "Demo: runes would be imported here"})
+        lcu = self.lcu
+
+        def work():
+            ok, msg = lcu.import_runes(build["runes"]) if lcu else (False, "League isn't connected.")
+            log.info("rune import %s: %s", champ, msg)
+            self.set(rune_import={"champ": champ, "ok": ok, "msg": msg})
+        threading.Thread(target=work, daemon=True).start()
 
     def show_assessment(self):
         self.set(status="assessment", in_select=False, assessment=assess(self.engine, self.last_draft, self.profile))
@@ -336,6 +378,17 @@ def make_handler(app):
             return super().do_GET()
 
         def do_POST(self):
+            if self.path in ("/api/runes", "/api/settings"):
+                body = json.loads(self.rfile.read(int(self.headers.get("Content-Length") or 0)) or b"{}")
+                if self.path == "/api/settings":
+                    app.set_setting("auto_runes", bool(body.get("auto_runes")))
+                else:
+                    d = app.last_draft or {}
+                    me = next((a for a in d.get("allies", []) if a["is_me"]), {})
+                    champ = me.get("champ") or me.get("hover")
+                    if champ:
+                        app.import_runes(champ, d.get("my_role") or app.profile.main_role() or "MIDDLE")
+                return self._json({"ok": True})
             if self.path == "/api/pool":
                 try:
                     body = json.loads(self.rfile.read(int(self.headers.get("Content-Length") or 0)) or b"{}")

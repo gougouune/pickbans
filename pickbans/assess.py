@@ -102,7 +102,11 @@ def assess(engine, draft, profile):
             head, tail = split_note(ch[c]["watch"], ch[c]["name"])
             traps.append({"id": c, "head": head, "tail": tail})
 
-    return {"headline": headline, "plan": plan, "tags": tags[:4], "matchups": matchups,
+    gameplan = None
+    if mine:
+        gameplan = {"champ": mine, "styles": ch[mine]["styles"], "play": ch[mine].get("play", ""), "build": engine.build(mine, role)}
+
+    return {"headline": headline, "plan": plan, "tags": tags[:4], "matchups": matchups, "gameplan": gameplan,
             "lane": lane, "traps": traps[:4], "allies": allies, "enemies": enemies}
 
 

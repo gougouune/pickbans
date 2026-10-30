@@ -292,15 +292,46 @@ function champSelect(s) {
     if (r.try && r.try.length) html += `<div class="try-sec">${section("Try this", r.try, "", "not in your pool")}</div>`;
     if (r.cheese.length) html += `<div class="try-sec">${section("Cheese ?", r.cheese, "", "oh btw")}</div>`;
   }
-  if (r.my_pick) html += myPick(r.my_pick, r.opponent, !!me.champ);
+  if (r.my_pick) html += myPick(s, r.my_pick, r.opponent, !!me.champ);
   if (s.assessment) html += `<h2>Match assessment</h2>` + assessmentBody(s.assessment, null);
   return html;
 }
 
-function myPick(p, opp, locked) {
+function itemIcon(i) { return `<img class="item" src="${i.img}" alt="${esc(i.name)}" title="${esc(i.name)}">`; }
+
+function runesBlock(b) {
+  const r = b.runes;
+  return `<div class="runes"><div class="rune-row">${r.shown.map((x, i) => `${i === 4 ? '<span class="rune-sep"></span>' : ""}${x.img ? `<img class="${i === 0 ? "keystone" : ""}" src="${x.img}" alt="${esc(x.name)}" title="${esc(x.name)}">` : ""}`).join("")}</div>
+    <div class="muted rune-names"><b>${esc(r.names[0])}</b> · ${esc(r.primary_name)} + ${esc(r.sub_name)}</div></div>`;
+}
+
+function buildBlock(b) {
+  const row = (label, items, after = "") => items.length ? `<div class="brow"><span class="blabel">${label}</span>${items.map(itemIcon).join("")}${after}</div>` : "";
+  return `<div class="build">${row("Start", b.start)}${row("Core", b.core)}${row("Boots", b.boots)}${row("Then", b.later)}</div>`;
+}
+
+function skillsBlock(b) {
+  if (!b.skills || !b.skills.length) return "";
+  const cells = b.skills.map((k, i) => `<div class="sk ${esc(k)}"><span>${i + 1}</span><b>${esc(k)}</b></div>`).join("");
+  const prio = b.prio && b.prio.length ? `<div class="sk-prio">Max order: <b>${b.prio.map(esc).join(" > ")}</b>, R whenever you can</div>` : "";
+  return `${prio}<div class="skills">${cells}</div>`;
+}
+
+function runeControls(s, champ) {
+  const imp = s.rune_import && s.rune_import.champ === champ ? s.rune_import : null;
+  const auto = !(s.settings && s.settings.auto_runes === false);
+  const status = imp ? `<span class="${imp.ok ? "good" : "bad"}">${imp.ok ? "✓ " : ""}${esc(imp.msg)}</span>`
+    : `<button class="mini" onclick="importRunes()">Import runes</button>`;
+  return `<div class="rune-ctl">${status}<label class="auto"><input type="checkbox" ${auto ? "checked" : ""} onchange="setAutoRunes(this.checked)"> auto-import on lock</label></div>`;
+}
+function importRunes() { fetch("/api/runes", { method: "POST", body: "{}" }); }
+function setAutoRunes(v) { fetch("/api/settings", { method: "POST", body: JSON.stringify({ auto_runes: v }) }); }
+
+function myPick(s, p, opp, locked) {
+  const b = p.build;
   return `<div class="mypick"><div class="row">${img(p.id)}<div><div class="name" style="font-weight:700">${locked ? "" : "Hovering: "}${nm(p.id)}</div>
     <div class="styles">${p.styles.map((x) => `<span>${esc(x)}</span>`).join("")}</div></div></div>
-    <div class="muted" style="font-size:11px;margin-top:6px">Playstyle — pick the matching build in your build tool</div>
+    ${b ? runesBlock(b) + runeControls(s, p.id) + buildBlock(b) + skillsBlock(b) : ""}
     ${p.play ? `<p><b>How to play:</b> ${esc(p.play)}</p>` : ""}
     ${opp && p.vs ? `<p><b>vs ${nm(opp)}:</b> ${esc(p.vs)}</p>` : ""}
     ${p.opp2 && p.vs2 ? `<p><b>vs ${nm(p.opp2)}:</b> ${esc(p.vs2)}</p>` : ""}
@@ -331,7 +362,15 @@ function mrow(m) {
 
 function assessmentBody(a, live) {
   const tags = a.tags.map((t) => `<span class="chip ${t.kind === "bad" ? "miss" : t.kind === "good" ? "ok" : "enemy"}">${esc(t.text)}</span>`).join("");
-  let h = `<div class="plan"><b>${esc(a.headline)}.</b> ${esc(a.plan)}</div>${tags ? `<div class="chips">${tags}</div>` : ""}`;
+  let h = "";
+  const gp = a.gameplan;
+  if (gp) {
+    const b = gp.build;
+    h += `<h2>Game plan <small>${nm(gp.champ)}</small></h2><div class="gameplan">
+      ${b ? buildBlock(b) + skillsBlock(b) : `<div class="muted">No build known for this champion yet.</div>`}
+      ${gp.play ? `<div class="gp-tip">${esc(gp.play)}</div>` : ""}</div>`;
+  }
+  h += `<div class="plan"><b>${esc(a.headline)}.</b> ${esc(a.plan)}</div>${tags ? `<div class="chips">${tags}</div>` : ""}`;
 
   h += `<h2>Matchups <small>green = your side wins the lane · % = your side</small></h2>` + a.matchups.map(mrow).join("");
   const bot = a.matchups.find((m) => m.duo !== undefined);

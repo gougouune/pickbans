@@ -2,7 +2,7 @@
 
 Pure functions, no I/O — recomputed from scratch on every draft change (fast: ~170 champs).
 """
-from .pack import ROLES
+from .pack import DDRAGON, ROLES
 
 TIER_VALUE = {"S": 1.0, "A": 0.8, "B": 0.6, "C": 0.4, "D": 0.25}
 GRADES = [(0.76, "S"), (0.66, "A"), (0.56, "B"), (0.46, "C"), (0.0, "D")]
@@ -499,6 +499,32 @@ class Engine:
         out.sort(key=lambda r: -r["score"])
         return out[:3]
 
+    def build(self, cid, role):
+        """Most played runes + build + skill order for this champion, with icons. Other lane if none in this one."""
+        builds = self.pack.get("builds", {})
+        b, used = builds.get(role, {}).get(cid), role
+        if not b:
+            others = [r for r in ROLES if builds.get(r, {}).get(cid)]
+            if not others:
+                return None
+            used = max(others, key=lambda r: (self.stat(cid, r) or {}).get("rr", 0))
+            b = builds[used][cid]
+        v = self.pack["version"]
+        icons = self.pack.get("rune_icons", {})
+        item = lambda i: dict(i, img=f"{DDRAGON}/cdn/{v}/img/item/{i['id']}.png")
+        r = b["runes"]
+        return {
+            "role": used,
+            "runes": dict(r, shown=[{"id": pid, "name": n, "img": f"{DDRAGON}/cdn/img/{icons[str(pid)]}" if str(pid) in icons else None}
+                                    for pid, n in zip(r["perks"], r["names"])]),
+            "start": [item(i) for i in b["start"]],
+            "core": [item(i) for i in b["core"]],
+            "boots": [item(i) for i in b["boots"]],
+            "later": [item(i) for i in b["later"]],
+            "skills": b["skills"],
+            "prio": b["prio"],
+        }
+
     def my_pick(self, cid, opp, ctx):
         c = self.champs.get(cid)
         if not c:
@@ -508,7 +534,7 @@ class Engine:
         return {"id": cid, "styles": c["styles"], "play": c.get("play", ""),
                 "vs": self.champs.get(opp, {}).get("vs", "") if opp else "",
                 "opp2": opp2, "vs2": self.champs.get(opp2, {}).get("vs", "") if opp2 else "",
-                "lane": round(lane, 2), "lane_why": lane_why}
+                "lane": round(lane, 2), "lane_why": lane_why, "build": self.build(cid, ctx["role"])}
 
 
 def role_label(role):

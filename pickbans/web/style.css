@@ -209,3 +209,27 @@ h2 small a { color: var(--accent); cursor: pointer; }
 .extras .qitem img { width: 34px; height: 34px; }
 .extras .quiz img { width: 26px; height: 26px; }
 .extras .qchoice { font-size: 12px; padding: 6px 9px; }
+
+/* runes + build + skill order */
+.runes { margin-top: 10px; }
+.rune-row { display: flex; align-items: center; gap: 4px; }
+.rune-row img { width: 26px; height: 26px; border-radius: 50%; background: #000; }
+.rune-row img.keystone { width: 38px; height: 38px; }
+.rune-sep { width: 8px; }
+.rune-names { font-size: 12px; margin-top: 4px; }
+.rune-ctl { display: flex; align-items: center; justify-content: space-between; gap: 8px; flex-wrap: wrap; font-size: 12px; margin: 6px 0 10px; }
+.mini { padding: 3px 9px; font-size: 12px; }
+.auto { color: var(--muted); display: flex; align-items: center; gap: 4px; cursor: pointer; }
+.build { display: grid; gap: 5px; }
+.brow { display: flex; align-items: center; gap: 4px; }
+.blabel { width: 42px; font-size: 11px; color: var(--muted); flex: none; }
+img.item { width: 30px; height: 30px; border-radius: 5px; border: 1px solid var(--line); }
+.sk-prio { font-size: 12px; color: var(--muted); margin-top: 10px; }
+.sk-prio b { color: var(--text); }
+.skills { display: flex; gap: 2px; margin-top: 5px; flex-wrap: wrap; }
+.sk { width: 22px; text-align: center; border-radius: 4px; background: var(--panel2); padding: 1px 0 2px; }
+.sk span { display: block; font-size: 9px; color: var(--muted); line-height: 1.1; }
+.sk b { font-size: 12px; line-height: 1.1; display: block; }
+.sk.Q b { color: #60a5fa; } .sk.W b { color: #34d399; } .sk.E b { color: #c084fc; } .sk.R { background: #c8aa6e33; } .sk.R b { color: var(--accent); }
+.gameplan { background: var(--panel); border: 1px solid var(--accent); border-radius: 10px; padding: 10px 12px; }
+.gp-tip { margin-top: 10px; font-size: 13px; }

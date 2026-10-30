@@ -158,13 +158,49 @@ _RANK_FIELDS = [
     "data.summary.positions[].stats.tier_data.{tier,rank,rank_prev_patch}",
     "data.weak_counters[].{champion_id,play,win}",
     "data.strong_counters[].{champion_id,play,win}",
+    "data.runes.{play,primary_page_id,primary_page_name,primary_rune_ids[],primary_rune_names[],secondary_page_id,secondary_page_name,secondary_rune_ids[],secondary_rune_names[],stat_mod_ids[]}",
+    "data.starter_items.{ids[],ids_names[],play}",
+    "data.core_items.{ids[],ids_names[],play}",
+    "data.boots.{ids[],ids_names[],play}",
+    "data.fourth_items[].{ids[],ids_names[],play}",
+    "data.fifth_items[].{ids[],ids_names[],play}",
+    "data.skills.{order[],play}",
+    "data.skill_masteries.{ids[],play}",
 ]
 _POS_NAME = {"TOP": "TOP", "JUNGLE": "JUNGLE", "MIDDLE": "MID", "BOTTOM": "ADC", "UTILITY": "SUPPORT"}
 
 
+def _items(entry):
+    return [{"id": i, "name": n} for i, n in zip(entry.get("ids") or [], entry.get("ids_names") or [])] if entry else []
+
+
+def _build_of(data):
+    """Most played runes / items / skill order at this rank, or None if OP.GG has nothing."""
+    r, core = data.get("runes"), data.get("core_items")
+    if not r or not core or not r.get("primary_rune_ids"):
+        return None
+    perks = (r["primary_rune_ids"] or []) + (r.get("secondary_rune_ids") or []) + (r.get("stat_mod_ids") or [])
+    if len(perks) != 9:
+        return None
+    skills = data.get("skills") or {}
+    return {
+        "play": core.get("play", 0),
+        "runes": {"primary": r["primary_page_id"], "primary_name": r["primary_page_name"],
+                  "sub": r["secondary_page_id"], "sub_name": r["secondary_page_name"], "perks": perks,
+                  "names": (r.get("primary_rune_names") or []) + (r.get("secondary_rune_names") or [])},
+        "start": _items(data.get("starter_items")),
+        "core": _items(core),
+        "boots": _items(data.get("boots")),
+        "later": [_items(x)[0] for x in ((data.get("fourth_items") or [])[:2] + (data.get("fifth_items") or [])[:2]) if _items(x)],
+        "skills": skills.get("order") or [],
+        "prio": (data.get("skill_masteries") or {}).get("ids") or [],
+    }
+
+
 def rank_stats(champ, role, rank, key_to_id):
-    """Stats for ONE rank (e.g. "gold"): lane win/pick/ban rate + tier, and the few head-to-heads OP.GG
-    gives per rank (3 best + 3 worst). Returns (stat dict or None, {opponent id: [games, wins]})."""
+    """Stats for ONE rank (e.g. "gold"): lane win/pick/ban rate + tier, the few head-to-heads OP.GG gives per
+    rank (3 best + 3 worst), and the most played runes + build.
+    Returns (stat dict or None, {opponent id: [games, wins]}, build dict or None)."""
     last = None
     for name in name_variants(champ):
         try:
@@ -181,7 +217,7 @@ def rank_stats(champ, role, rank, key_to_id):
             pairs = {key_to_id[c["champion_id"]]: [c["play"], c["win"]]
                      for c in (data.get("weak_counters") or []) + (data.get("strong_counters") or [])
                      if c.get("champion_id") in key_to_id and c.get("play")}
-            return stat, pairs
+            return stat, pairs, _build_of(data)
         except Exception as e:
             last = e
             time.sleep(0.5)

@@ -109,6 +109,8 @@ def build_pack(kb_dir):
         "matchups": {},
     }
     pack["items"] = build_items(kb_dir, version)
+    pack["rune_icons"] = {str(r["id"]): r["icon"] for style in net.get_json(f"{DDRAGON}/cdn/{version}/data/en_US/runesReforged.json")
+                          for slot in style["slots"] for r in slot["runes"]}
     stats_file = os.path.join(kb_dir, "stats.json")
     if os.path.exists(stats_file):  # real stats from tools/fetch_stats.py
         with open(stats_file, encoding="utf-8") as f:
@@ -116,7 +118,8 @@ def build_pack(kb_dir):
         pack.update(stats=s["meta"], matchups=s["matchups"], meta_source=s.get("source", "op.gg"),
                     stats_version=s["version"], stats_at=s["fetched_at"],
                     matchups_version=s["version"], matchups_at=s["fetched_at"],
-                    matchups_rank=s.get("matchups_rank", {}), stats_rank=s.get("rank"), stats_thin=bool(s.get("thin")))
+                    matchups_rank=s.get("matchups_rank", {}), stats_rank=s.get("rank"), stats_thin=bool(s.get("thin")),
+                    builds=s.get("builds", {}))
     return pack
 
 
