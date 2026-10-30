@@ -84,13 +84,15 @@ def _facts(engine, profile, pool):
         st = engine.stat(cid, role)
         nb = _notebook(engine, profile, cid, role)
         if st:
-            facts.append({"kind": "fact", "ids": [cid], "text": f"{name(cid)} {lane} wins {round(st['wr'] * 100)}% of games this patch "
+            where = {"gold": "in Gold"}.get(engine.pack.get("stats_rank"), "in ranked")
+            facts.append({"kind": "fact", "ids": [cid], "text": f"{name(cid)} {lane} wins {round(st['wr'] * 100)}% of games {where} "
                           f"({engine.tier(cid, role)} tier, #{st['rank']} in lane)."})
             move = (st.get("prev") or st["rank"]) - st["rank"]
-            if move >= 3:
-                facts.append({"kind": "fact", "ids": [cid], "text": f"{name(cid)} climbed {move} spots among {lane.lower()}s this patch."})
-            elif move <= -3:
-                facts.append({"kind": "fact", "ids": [cid], "text": f"{name(cid)} dropped {-move} spots among {lane.lower()}s this patch."})
+            if not engine.pack.get("stats_thin"):  # early in a patch these numbers are last patch's
+                if move >= 3:
+                    facts.append({"kind": "fact", "ids": [cid], "text": f"{name(cid)} climbed {move} spots among {lane.lower()}s this patch."})
+                elif move <= -3:
+                    facts.append({"kind": "fact", "ids": [cid], "text": f"{name(cid)} dropped {-move} spots among {lane.lower()}s this patch."})
             if st["br"] >= 0.15:
                 facts.append({"kind": "fact", "ids": [cid], "text": f"{name(cid)} is banned in {round(st['br'] * 100)}% of games — have a backup pick."})
         # head-to-heads are always a question, never a sentence that gives the answer away
@@ -109,11 +111,10 @@ def _facts(engine, profile, pool):
     main = profile.main_role()
     lane_stats = engine.pack.get("stats", {}).get(main, {})
     if lane_stats:
-        banned = max(lane_stats, key=lambda c: lane_stats[c]["br"])
-        best = max((c for c in lane_stats if lane_stats[c]["pr"] >= 0.02), key=lambda c: lane_stats[c]["wr"], default=None)
-        facts.append({"kind": "fact", "ids": [banned], "text": f"Most banned {role_label(main).lower()}: {name(banned)} ({round(lane_stats[banned]['br'] * 100)}% of games)."})
-        if best:
-            facts.append({"kind": "fact", "ids": [best], "text": f"Best win rate among popular {role_label(main).lower()}s: {name(best)} ({round(lane_stats[best]['wr'] * 100)}%)."})
+        by_ban = sorted(lane_stats, key=lambda c: -lane_stats[c]["br"])
+        top = lane_stats[by_ban[0]]["br"]
+        if len(by_ban) > 1 and top - lane_stats[by_ban[1]]["br"] >= 0.03:  # numbers are rounded: only a clear #1 counts
+            facts.append({"kind": "fact", "ids": [by_ban[0]], "text": f"Most banned {role_label(main).lower()}: {name(by_ban[0])} ({round(top * 100)}% of games)."})
     rng = random.Random(time.strftime("%Y-%m-%d"))  # new order every day, stable within a day
     quizzes = [f for f in facts if f["kind"] == "quiz"]
     others = [f for f in facts if f["kind"] != "quiz"]

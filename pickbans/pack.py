@@ -116,7 +116,7 @@ def build_pack(kb_dir):
         pack.update(stats=s["meta"], matchups=s["matchups"], meta_source=s.get("source", "op.gg"),
                     stats_version=s["version"], stats_at=s["fetched_at"],
                     matchups_version=s["version"], matchups_at=s["fetched_at"],
-                    matchups_rank=s.get("matchups_rank", {}), stats_rank=s.get("rank"))
+                    matchups_rank=s.get("matchups_rank", {}), stats_rank=s.get("rank"), stats_thin=bool(s.get("thin")))
     return pack
 
 

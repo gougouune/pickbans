@@ -323,7 +323,7 @@ class Engine:
                 reasons.append(w)
         if tier == "S":
             st = self.stat(cid, role)
-            reasons.append(f"S tier this patch ({round(st['wr'] * 100)}% wins)" if st else "Strong pick in this role")
+            reasons.append(f"S tier right now ({round(st['wr'] * 100)}% wins)" if st else "Strong pick in this role")
         elif tier in ("C", "D") and comfort < 0.4:
             reasons.append("Weaker in this role right now")
         wr = profile.winrate(cid)
