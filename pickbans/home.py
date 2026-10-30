@@ -78,6 +78,7 @@ def _facts(engine, profile, pool):
     ch = engine.champs
     name = lambda c: ch[c]["name"]
     facts = []
+    asked = set()
     for cid, role in pool:
         lane = role_label(role)
         st = engine.stat(cid, role)
@@ -92,12 +93,11 @@ def _facts(engine, profile, pool):
                 facts.append({"kind": "fact", "ids": [cid], "text": f"{name(cid)} dropped {-move} spots among {lane.lower()}s this patch."})
             if st["br"] >= 0.15:
                 facts.append({"kind": "fact", "ids": [cid], "text": f"{name(cid)} is banned in {round(st['br'] * 100)}% of games — have a backup pick."})
-        for m in nb["best"][:2]:
-            facts.append({"kind": "fact", "ids": [cid, m["vs"]], "text": f"{name(cid)} wins {round(m['wr'] * 100)}% vs {name(m['vs'])} — a lane to pick into."})
-        for m in nb["worst"][:2]:
-            facts.append({"kind": "fact", "ids": [cid, m["vs"]], "text": f"{name(cid)} only wins {round(m['wr'] * 100)}% vs {name(m['vs'])} — ban it or pick something else."})
-        for m in nb["best"][:3] + nb["worst"][:3]:
-            if abs(m["wr"] - 0.5) >= 0.025:
+        # head-to-heads are always a question, never a sentence that gives the answer away
+        for m in nb["best"][:4] + nb["worst"][:4]:
+            pair = frozenset((cid, m["vs"]))
+            if abs(m["wr"] - 0.5) >= 0.025 and pair not in asked:
+                asked.add(pair)
                 facts.append({"kind": "quiz", "ids": [cid, m["vs"]], "role": lane,
                               "winner": cid if m["wr"] > 0.5 else m["vs"], "wr": round(max(m["wr"], 1 - m["wr"]) * 100)})
         rec = profile.games.get(cid)
@@ -114,5 +114,13 @@ def _facts(engine, profile, pool):
         facts.append({"kind": "fact", "ids": [banned], "text": f"Most banned {role_label(main).lower()}: {name(banned)} ({round(lane_stats[banned]['br'] * 100)}% of games)."})
         if best:
             facts.append({"kind": "fact", "ids": [best], "text": f"Best win rate among popular {role_label(main).lower()}s: {name(best)} ({round(lane_stats[best]['wr'] * 100)}%)."})
-    random.Random(time.strftime("%Y-%m-%d")).shuffle(facts)  # new order every day, stable within a day
-    return facts[:40]
+    rng = random.Random(time.strftime("%Y-%m-%d"))  # new order every day, stable within a day
+    quizzes = [f for f in facts if f["kind"] == "quiz"]
+    others = [f for f in facts if f["kind"] != "quiz"]
+    rng.shuffle(quizzes)
+    rng.shuffle(others)
+    out = []
+    while quizzes or others:  # mostly questions: two quizzes, then a fact
+        out += quizzes[:2] + others[:1]
+        quizzes, others = quizzes[2:], others[1:]
+    return out[:40]

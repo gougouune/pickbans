@@ -75,11 +75,11 @@ function foot(s) {
 let LAST = null;       // last state, so clicks can re-render without waiting for the server
 let nbChamp = null;    // champion selected in the matchup notebook
 let factIdx = 0;
-let quizOpen = false;
+let quizAnswer = null;   // {key, picked} of the matchup question you answered
 const rerender = () => LAST && render(LAST);
 function pickNb(id) { nbChamp = id; rerender(); }
-function nextFact() { factIdx++; quizOpen = false; rerender(); }
-function answerQuiz() { quizOpen = true; rerender(); }
+function nextFact() { factIdx++; quizAnswer = null; rerender(); }
+function answerQuiz(key, picked) { quizAnswer = { key, picked }; rerender(); }
 const pct = (x) => Math.round(x * 100);
 const ago = (t) => { const h = (Date.now() / 1000 - t) / 3600; return h < 1 ? "now" : h < 24 ? `${Math.round(h)}h` : `${Math.round(h / 24)}d`; };
 
@@ -202,10 +202,14 @@ function factCard(f) {
   let body;
   if (f.kind === "quiz") {
     const [a, b] = f.ids;
-    body = quizOpen
-      ? `<div class="quiz">${img(f.winner)}<div><b>${nm(f.winner)}</b> wins ${f.wr}% of the time.</div></div>`
-      : `<div class="quiz-q">${f.role}: who wins the lane?</div><div class="quiz">
-          <button onclick="answerQuiz()">${img(a)} ${nm(a)}</button><span class="muted">vs</span><button onclick="answerQuiz()">${img(b)} ${nm(b)}</button></div>`;
+    const key = f.ids.join("|");
+    if (quizAnswer && quizAnswer.key === key) {
+      const right = quizAnswer.picked === f.winner;
+      body = `<div class="quiz">${img(f.winner)}<div><b class="${right ? "good" : "bad"}">${right ? "Right!" : "Nope."}</b> <b>${nm(f.winner)}</b> wins ${f.wr}% of the time.</div></div>`;
+    } else {
+      body = `<div class="quiz-q">${f.role}: who wins the lane?</div><div class="quiz">
+          <button onclick="answerQuiz('${key}','${a}')">${img(a)} ${nm(a)}</button><span class="muted">vs</span><button onclick="answerQuiz('${key}','${b}')">${img(b)} ${nm(b)}</button></div>`;
+    }
   } else {
     body = `<div class="quiz">${f.ids.map(img).join("")}<div>${esc(f.text)}</div></div>`;
   }
