@@ -6,7 +6,10 @@ const ROLE = { TOP: "Top", JUNGLE: "Jungle", MIDDLE: "Mid", BOTTOM: "Bot", UTILI
 const esc = (s) => String(s ?? "").replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
 const RANK_LABEL = { gold: "Gold", gold_plus: "Gold+", emerald_plus: "Emerald+", all: "all ranks", silver: "Silver", platinum: "Platinum" };
 const DMG = { AD: "physical (AD)", AP: "magic (AP)", MIX: "mixed AD/AP" };
-const img = (id) => (CH[id] ? `<img class="dmg-${CH[id].dmg}" src="${CH[id].img}" alt="${esc(CH[id].name)}" title="${esc(CH[id].name)} — ${DMG[CH[id].dmg] || ""}">` : "");
+const MARK_ICON = { love: "❤️", like: "👍", hate: "🤮", ban: "🚫" };
+const MARK_TEXT = { love: "Love playing it", like: "Like playing it", hate: "Hate playing against it", ban: "Ban: never pick, always ban" };
+const mk = (id) => ((LAST && LAST.marks && LAST.marks[id]) ? `<span class="mk" title="${esc(MARK_TEXT[LAST.marks[id]])}">${MARK_ICON[LAST.marks[id]]}</span>` : "");
+const img = (id) => (CH[id] ? `<img data-champ="${id}" class="dmg-${CH[id].dmg}" src="${CH[id].img}" alt="${esc(CH[id].name)}" title="${esc(CH[id].name)} — ${DMG[CH[id].dmg] || ""} (right-click: love / like / hate / ban)">` : "");
 const nm = (id) => esc(CH[id]?.name || id);
 const post = (url) => fetch(url, { method: "POST" }).then(() => (lastSeq = -1));
 
@@ -62,6 +65,7 @@ function render(s) {
   header(s);
   if (s.status === "champ_select" && s.recs) return ($root.innerHTML = champSelect(s) + foot(s));
   if (s.status === "assessment" && s.assessment) return ($root.innerHTML = assessment(s.assessment, s.live) + foot(s));
+  if (s.status === "postgame") return ($root.innerHTML = postgame(s) + foot(s));
   $root.innerHTML = idle(s) + foot(s);
 }
 
@@ -90,6 +94,7 @@ function idle(s) {
   if (!h) {
     return html + `<div class="muted hint">Open League once and your recent games, pool and matchup notebook show up here.</div>` + myPool(s) + extras(itemQuiz());
   }
+  html += lastGame(s);
   if (h.recent.length) {
     const wins = h.recent.filter((g) => g.win).length;
     html += `<h2>Recent games <small>${wins}W ${h.recent.length - wins}L</small></h2><div class="recent">` + h.recent.map((g) =>
@@ -100,6 +105,44 @@ function idle(s) {
   if (h.pool.length) html += notebook(h);
   html += extras((h.facts.length ? factCard(h.facts[factIdx % h.facts.length]) : "") + itemQuiz());
   return html;
+}
+
+// ---------- post-match breakdown ----------
+const fmtDur = (sec) => `${Math.floor(sec / 60)}:${String(sec % 60).padStart(2, "0")}`;
+const arrow = { better: "▲", worse: "▼", same: "–" };
+
+function breakdownBlock(b, title) {
+  const tiles = b.tiles.map((t) => `<div class="tile ${t.state}"><div class="tl">${esc(t.label)}</div>
+      <div class="tv">${t.value}${t.pct ? "%" : ""}</div>
+      <div class="tb">typical ${t.bench}${t.pct ? "%" : ""}${t.avg !== null && t.avg !== undefined ? ` · you ${t.avg}${t.pct ? "%" : ""}` : ""}${t.sub ? ` · ${esc(t.sub)}` : ""}</div></div>`).join("");
+  const finds = b.findings.length ? b.findings.map((f) => `<div class="bd-find ${f.kind}"><b>${esc(f.title)}</b><div>${esc(f.text)}</div></div>`).join("")
+    : `<div class="muted" style="font-size:13px">Nothing stands out in the numbers.</div>`;
+  const maxCs = Math.max(1, ...b.phases.map((p) => p.cs || 0));
+  const phases = b.phases.length ? `<div class="bd-sub">Over time</div><div class="phases">${b.phases.map((p) =>
+    `<div class="ph"><div class="pl">${esc(p.label)} min</div>
+      ${p.cs !== null && p.cs !== undefined ? `<div class="pbar"><i style="height:${Math.round((p.cs / maxCs) * 100)}%"></i></div><div class="pv">${p.cs} cs/min</div>` : ""}
+      ${p.deaths !== null && p.deaths !== undefined ? `<div class="pd">${p.deaths ? "💀".repeat(Math.min(p.deaths, 6)) : "·"}</div>` : ""}
+      ${p.wards !== null && p.wards !== undefined ? `<div class="pv">${p.wards} wards</div>` : ""}</div>`).join("")}</div>` : "";
+  const tr = b.trend.length ? `<div class="bd-sub">Your last 5 games vs the 5 before</div>` + b.trend.map((t) =>
+    `<div class="trow"><span>${esc(t.label)}</span><span class="${t.state === "better" ? "good" : t.state === "worse" ? "bad" : "muted"}">${t.before}${t.pct ? "%" : ""} → ${t.now}${t.pct ? "%" : ""} ${arrow[t.state]}</span></div>`).join("") : "";
+  return `<div class="bd">
+    <div class="bd-top">${b.champ ? img(b.champ) : ""}<div><b>${b.champ ? nm(b.champ) : ""}</b> <span class="muted">${b.k}/${b.d}/${b.a} · ${fmtDur(b.dur)} · ${esc(ROLE[b.role] || "")}</span></div>
+      <span class="res ${b.win ? "win" : "loss"}">${b.win ? "Victory" : "Defeat"}</span></div>
+    <div class="tiles">${tiles}</div>
+    <div class="bd-sub">${esc(title || "What the numbers say")}</div>${finds}${phases}${tr}</div>`;
+}
+
+function postgame(s) {
+  const b = s.last_game;
+  return `<div class="ig-head"><b>Game over</b><span class="pill">post-match</span></div>` +
+    (s.analyzing && !b ? `<div class="center muted" style="padding:30px 0">Analyzing your game…</div>` : "") +
+    (s.analyzing && b ? `<div class="muted" style="font-size:12px;margin:8px 0">Analyzing your latest game… (showing the previous one)</div>` : "") +
+    (b ? breakdownBlock(b) : (!s.analyzing ? `<div class="muted hint">No breakdown available for this game.</div>` : ""));
+}
+
+function lastGame(s) {
+  const b = s.last_game;
+  return b ? `<h2>Last game <small>${b.win ? "victory" : "defeat"}</small></h2>${breakdownBlock(b, "What to work on")}` : "";
 }
 
 // ---------- My pool: what the app detected + your changes ----------
@@ -130,7 +173,7 @@ function myPool(s) {
   const tabs = ["TOP", "JUNGLE", "MIDDLE", "BOTTOM", "UTILITY"].map((r) =>
     `<div class="ptab ${r === poolRole ? "on" : ""}" onclick="setPoolRole('${r}')">${ROLE[r]} <span>${(pool.roles[r] || []).length}</span></div>`).join("");
   const list = (pool.roles[poolRole] || []).map((e) =>
-    `<div class="pchamp ${e.source}" title="${esc(e.why)}">${img(e.id)}<div class="pname">${nm(e.id)}</div>
+    `<div class="pchamp ${e.source}" title="${esc(e.why)}">${img(e.id)}<div class="pname">${nm(e.id)} ${mk(e.id)}</div>
       <div class="pwhy">${e.source === "added" ? "added" : e.games ? `${e.games} games` : esc(e.why)}</div>
       <button class="px" title="Remove from my pool" onclick="poolEdit('remove','${e.id}')">✕</button></div>`).join("");
   const removed = (pool.removed[poolRole] || []);
@@ -229,7 +272,7 @@ function notebook(h) {
   const nb = h.notebook[nbChamp];
   const me = h.pool.find((x) => x.id === nbChamp);
   const tabs = h.pool.map((x) => `<div class="ntab ${x.id === nbChamp ? "on" : ""}" onclick="pickNb('${x.id}')">${img(x.id)}</div>`).join("");
-  const head = `<div class="nhead"><b>${nm(nbChamp)}</b> <span class="muted">${ROLE[nb.role] || ""}</span>
+  const head = `<div class="nhead"><b>${nm(nbChamp)}</b> ${mk(nbChamp)} <span class="muted">${ROLE[nb.role] || ""}</span>
       <span class="grade-inline ${me.tier}">${me.tier}</span>${me.wr ? `<span class="muted">${pct(me.wr)}% wins</span>` : ""}
       ${me.games ? `<span class="muted">· you ${me.wins}W ${me.games - me.wins}L</span>` : ""}</div>`;
   const mine = nb.mine.length ? `<div class="nsub">Your games</div>` + nb.mine.map((m) => mline(m, true)).join("") : `<div class="nsub muted">No games logged on ${nm(nbChamp)} yet.</div>`;
@@ -244,7 +287,7 @@ function card(r, opts = {}) {
   const c = CH[r.id] || {};
   const g = opts.noGrade ? "" : `<div class="grade ${r.grade}">${r.grade}</div>`;
   return `<div class="card ${opts.noGrade ? "" : r.grade}">${g}
-    <div class="top">${img(r.id)}<div style="min-width:0"><div class="name">${nm(r.id)}</div><div class="style">${esc((c.styles || []).join(" · "))}</div></div></div>
+    <div class="top">${img(r.id)}<div style="min-width:0"><div class="name">${nm(r.id)} ${mk(r.id)}</div><div class="style">${esc((c.styles || []).join(" · "))}</div></div></div>
     <div class="why">${(r.reasons || []).map(esc).join("<br>")}</div></div>`;
 }
 
@@ -297,7 +340,12 @@ function champSelect(s) {
   return html;
 }
 
-function itemIcon(i) { return `<img class="item" src="${i.img}" alt="${esc(i.name)}" title="${esc(i.name)}">`; }
+let OWNED = new Set();   // items you own right now (live), so the build shows what's already bought
+function itemIcon(i) {
+  const own = OWNED.has(String(i.id));
+  const im = `<img class="item" src="${i.img}" alt="${esc(i.name)}" title="${esc(i.name)}${own ? " (bought)" : ""}">`;
+  return own ? `<span class="own">${im}<i>✓</i></span>` : im;
+}
 
 function runesBlock(b) {
   const r = b.runes;
@@ -310,12 +358,15 @@ function buildBlock(b) {
   return `<div class="build">${row("Start", b.start)}${row("Core", b.core)}${row("Boots", b.boots)}${row("Then", b.later)}</div>`;
 }
 
-function situationalBlock(list) {
+function situationalBlock(list, changed, now) {
   if (!list || !list.length) return "";
-  return `<div class="situ"><div class="situ-head">For this game</div>${list.map((x) =>
-    `<div class="situ-row"><img class="item" src="${x.img}" alt="${esc(x.name)}" title="${esc(x.name)}"><div><b>${esc(x.name)}</b>
-      <div class="muted">${x.champs.length ? x.champs.map(nm).join(", ") + ": " : ""}${esc(x.why)}</div></div></div>`).join("")}</div>`;
+  const fresh = changed && now !== undefined && now - changed.time < 240;
+  return `<div class="situ"><div class="situ-head">For this game <span class="live-dot" title="re-checked on every kill and every enemy purchase"></span></div>
+    ${fresh ? `<div class="situ-upd">Updated ${esc(changed.clock)}: ${esc(changed.text)}</div>` : ""}${list.map((x) =>
+    `<div class="situ-row"><img class="item" src="${x.img}" alt="${esc(x.name)}" title="${esc(x.name)}"><div><b>${esc(x.name)}</b>${x.early ? ' <span class="early">buy earlier</span>' : ""}
+      <div class="muted">${x.champs.length ? x.champs.map(nm).join(", ") + ": " : ""}${esc(x.why)}</div>${x.live ? `<div class="situ-why">because ${esc(x.live)}</div>` : ""}</div></div>`).join("")}</div>`;
 }
+
 
 function skillsBlock(b) {
   if (!b.skills || !b.skills.length) return "";
@@ -371,11 +422,13 @@ function assessmentBody(a, live) {
   const tags = a.tags.map((t) => `<span class="chip ${t.kind === "bad" ? "miss" : t.kind === "good" ? "ok" : "enemy"}">${esc(t.text)}</span>`).join("");
   let h = "";
   const gp = a.gameplan;
+  OWNED = new Set(live && live.owned ? live.owned.map(String) : []);
   if (gp) {
     const b = gp.build;
+    const sit = live && live.situational !== undefined ? live.situational : gp.situational;
     h += `<h2>Game plan <small>${nm(gp.champ)}</small></h2><div class="gameplan">
       ${b ? buildBlock(b) : `<div class="muted">No build known for this champion yet.</div>`}
-      ${situationalBlock(gp.situational)}
+      ${situationalBlock(sit, live && live.sit_changed, live && live.time)}
       ${b ? skillsBlock(b) : ""}
       ${gp.play ? `<div class="gp-tip">${esc(gp.play)}</div>` : ""}</div>`;
   }
@@ -389,7 +442,7 @@ function assessmentBody(a, live) {
   }
 
   if (a.traps.length)
-    h += `<h2>Watch out</h2>` + a.traps.map((t) => `<div class="trap">${img(t.id)}<div><b>${esc(t.head)}</b>${t.tail ? ` <span class="muted">· ${esc(t.tail)}</span>` : ""}</div></div>`).join("");
+    h += `<h2>Watch out</h2>` + a.traps.map((t) => `<div class="trap ${t.hate ? "hate" : ""}">${img(t.id)}<div>${t.hate ? "🤮 " : ""}<b>${esc(t.head)}</b>${t.tail ? ` <span class="muted">· ${esc(t.tail)}</span>` : ""}</div></div>`).join("");
 
   h += `<h2>Now</h2><div class="live">${nowBox(a, live)}</div>`;
   return h;
@@ -410,3 +463,33 @@ function nowBox(a, live) {
 }
 
 boot();
+
+
+// ---------- right-click a champion anywhere: love / like / hate / ban ----------
+let ctxMenu = null;
+function closeMenu() { if (ctxMenu) { ctxMenu.remove(); ctxMenu = null; } }
+async function setMark(champ, kind) {
+  closeMenu();
+  await fetch("/api/mark", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ champ, mark: kind }) });
+  lastSeq = -1;  // redraw with the new mark on the next poll
+}
+document.addEventListener("contextmenu", (e) => {
+  const t = e.target.closest && e.target.closest("[data-champ]");
+  if (!t || !CH[t.dataset.champ]) return;
+  e.preventDefault();
+  closeMenu();
+  const id = t.dataset.champ, cur = LAST && LAST.marks && LAST.marks[id];
+  ctxMenu = document.createElement("div");
+  ctxMenu.className = "ctxmenu";
+  ctxMenu.innerHTML = `<div class="ctx-head">${img(id)}<b>${nm(id)}</b></div>` +
+    Object.keys(MARK_ICON).map((k) => `<button class="${cur === k ? "on" : ""}" onclick="setMark('${id}','${cur === k ? "" : k}')">
+      <span>${MARK_ICON[k]}</span>${esc(MARK_TEXT[k])}${cur === k ? " ✓" : ""}</button>`).join("") +
+    (cur ? `<button class="clear" onclick="setMark('${id}','')">Clear</button>` : "");
+  document.body.appendChild(ctxMenu);
+  const w = ctxMenu.offsetWidth, h = ctxMenu.offsetHeight;
+  ctxMenu.style.left = Math.max(4, Math.min(e.pageX, window.scrollX + window.innerWidth - w - 6)) + "px";
+  ctxMenu.style.top = Math.max(4, Math.min(e.pageY, window.scrollY + window.innerHeight - h - 6)) + "px";
+});
+document.addEventListener("click", (e) => { if (ctxMenu && !ctxMenu.contains(e.target)) closeMenu(); });
+document.addEventListener("keydown", (e) => { if (e.key === "Escape") closeMenu(); });
+window.addEventListener("blur", closeMenu);

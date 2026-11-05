@@ -239,3 +239,44 @@ img.item { width: 30px; height: 30px; border-radius: 5px; border: 1px solid var(
 .situ-head { font-size: 11px; text-transform: uppercase; letter-spacing: .6px; color: var(--accent); margin-bottom: 6px; }
 .situ-row { display: flex; gap: 8px; align-items: center; margin-bottom: 6px; font-size: 13px; line-height: 1.25; }
 .situ-row .muted { font-size: 11.5px; }
+
+/* right-click menu + marks */
+.mk { font-size: 12px; }
+.ctxmenu { position: absolute; z-index: 50; background: var(--panel); border: 1px solid var(--border, var(--line)); border-radius: 10px; padding: 6px; min-width: 230px; box-shadow: 0 6px 24px #000a; }
+.ctx-head { display: flex; align-items: center; gap: 8px; padding: 4px 6px 8px; border-bottom: 1px solid var(--line); margin-bottom: 4px; }
+.ctx-head img { width: 26px; height: 26px; border-radius: 5px; }
+.ctxmenu button { display: flex; align-items: center; gap: 10px; width: 100%; text-align: left; background: transparent; border: none; border-radius: 6px; padding: 7px 8px; font-size: 13px; }
+.ctxmenu button span { width: 20px; text-align: center; font-size: 15px; }
+.ctxmenu button:hover { background: var(--panel2); }
+.ctxmenu button.on { background: #c8aa6e22; }
+.ctxmenu button.clear { color: var(--muted); font-size: 12px; }
+.trap.hate { border-left-color: var(--bad); }
+
+/* live "for this game" items */
+.own { position: relative; display: inline-block; line-height: 0; }
+.own img { opacity: .45; }
+.own i { position: absolute; right: -2px; bottom: -3px; font-style: normal; font-size: 11px; line-height: 1; color: var(--good); background: var(--bg); border-radius: 50%; padding: 1px 2px; }
+.early { font-size: 10px; text-transform: uppercase; letter-spacing: .4px; color: var(--S); border: 1px solid var(--S); border-radius: 99px; padding: 0 6px; margin-left: 4px; }
+.situ-why { font-size: 11px; color: var(--accent); margin-top: 1px; }
+.situ-upd { font-size: 12px; color: var(--S); background: #ffb02014; border-radius: 6px; padding: 4px 8px; margin-bottom: 6px; }
+.live-dot { display: inline-block; width: 7px; height: 7px; border-radius: 50%; background: var(--good); margin-left: 6px; vertical-align: 1px; }
+
+/* post-match breakdown */
+.bd { background: var(--panel); border-radius: 12px; padding: 12px; }
+.bd-top { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; }
+.bd-top img { width: 38px; height: 38px; border-radius: 8px; }
+.res { margin-left: auto; font-size: 11px; font-weight: 700; padding: 2px 9px; border-radius: 99px; }
+.res.win { background: #34d39922; color: var(--good); } .res.loss { background: #f8717122; color: var(--bad); }
+.tiles { display: grid; grid-template-columns: repeat(auto-fit, minmax(105px, 1fr)); gap: 8px; margin-bottom: 12px; }
+.tile { background: var(--panel2); border-radius: 8px; padding: 8px 10px; border-left: 3px solid var(--line); }
+.tile.good { border-left-color: var(--good); } .tile.bad { border-left-color: var(--bad); } .tile.ok { border-left-color: var(--S); }
+.tl { font-size: 11px; color: var(--muted); } .tv { font-size: 20px; font-weight: 600; line-height: 1.2; } .tb { font-size: 10.5px; color: var(--muted); }
+.bd-sub { font-size: 11px; text-transform: uppercase; letter-spacing: .6px; color: var(--muted); margin: 14px 0 6px; }
+.bd-find { border-left: 3px solid var(--line); padding: 4px 10px; margin-bottom: 8px; font-size: 13px; }
+.bd-find.bad { border-left-color: var(--bad); } .bd-find.good { border-left-color: var(--good); }
+.bd-find b { display: block; } .bd-find div { color: var(--muted); font-size: 12.5px; line-height: 1.35; }
+.phases { display: flex; gap: 8px; } .ph { flex: 1; text-align: center; background: var(--panel2); border-radius: 8px; padding: 6px 4px; font-size: 11px; }
+.pl { color: var(--muted); } .pbar { height: 40px; display: flex; align-items: flex-end; justify-content: center; margin: 4px 0 2px; }
+.pbar i { display: block; width: 16px; background: var(--B); border-radius: 3px 3px 0 0; min-height: 2px; }
+.pv { color: var(--muted); } .pd { font-size: 13px; line-height: 1.5; min-height: 20px; }
+.trow { display: flex; justify-content: space-between; font-size: 13px; padding: 3px 0; border-bottom: 1px solid var(--line); }

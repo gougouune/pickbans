@@ -20,7 +20,7 @@ PICKS = [
 ]
 
 
-def fake_live(elapsed, names):
+def fake_live(elapsed, names, my_item_ids=()):
     """Live Client Data shaped like the real API. Game clock runs 15x fast so the demo shows level 6, drake, etc.
     names: {champ id: display name}"""
     t = 60 + elapsed * 15
@@ -31,10 +31,18 @@ def fake_live(elapsed, names):
         for pos, cid in champs.items():
             lvl = min(18, 1 + int((t + lead) / (95 if pos != "UTILITY" else 110)))
             me = team == "ORDER" and pos == "UTILITY"
+            items = []
+            if me:   # you buy your build as the game goes
+                items = [int(i) for i in list(my_item_ids)[:max(0, int((t - 240) // 240) + 1)]]
+            elif cid == "Caitlyn" and t >= 480:      # a lifesteal item at ~8:00
+                items = [3072]
+            elif cid in ("Malphite", "Sejuani") and t >= 600:  # armor stacking at ~10:00
+                items = [3075, 3068]
             players.append({"championName": names[cid], "rawChampionName": f"game_character_displayname_{cid}",
                             "team": team, "position": pos, "level": lvl, "isDead": False,
                             "riotId": "DemoPlayer#DEMO" if me else f"{cid}#BOT",
-                            "scores": {"kills": int(t / (260 if team == "ORDER" else 300))}})
+                            "items": [{"itemID": i, "slot": n, "count": 1} for n, i in enumerate(items)],
+                            "scores": {"kills": int(t / (260 if team == "ORDER" else 300)), "deaths": int(t / 700)}})
     events = [{"EventName": "GameStart", "EventTime": 0}]
     if t > 330:
         events.append({"EventName": "DragonKill", "EventTime": 330})
@@ -113,3 +121,40 @@ def timeline(key_of):
     t += 6
     steps.append((t, "InProgress", None))
     return steps
+
+
+def fake_game(key_of):
+    """A finished game shaped like the client's match-history answers: (detail, timeline, my champion key).
+    You played Nami support, died early and often, put down few wards."""
+    me_key = key_of("Nami")
+    champs = [266, 64, 103, 22, me_key, 54, 106, 61, 51, 53]           # participant ids 1..10
+    stats = [dict(kills=5, deaths=3, assists=6, totalMinionsKilled=190, neutralMinionsKilled=0, visionScore=20, wardsPlaced=9,
+                  wardsKilled=1, visionWardsBoughtInGame=2, totalDamageDealtToChampions=17000, win=False) for _ in range(10)]
+    stats[4] = dict(kills=1, deaths=8, assists=9, totalMinionsKilled=24, neutralMinionsKilled=0, visionScore=22, wardsPlaced=11,
+                    wardsKilled=2, visionWardsBoughtInGame=0, totalDamageDealtToChampions=6500, win=False)
+    parts = []
+    for i in range(10):
+        parts.append({"participantId": i + 1, "teamId": 100 if i < 5 else 200, "championId": champs[i], "stats": stats[i],
+                      "timeline": {"lane": "BOTTOM", "role": "DUO_SUPPORT", "creepsPerMinDeltas": {"0-10": 1.0, "10-20": 0.7, "20-30": 0.4},
+                                   "csDiffPerMinDeltas": {"0-10": -0.2}} if i == 4 else {}})
+    detail = {"gameId": 123, "gameDuration": 1740, "participants": parts}
+    # your 8 deaths (blue side: x + y above ~14900 = enemy half of the map)
+    deaths = [(300, 9500, 6800), (420, 10200, 6900), (560, 9000, 7000), (840, 3000, 4000), (1000, 11000, 5600),
+              (1300, 2500, 5200), (1500, 10500, 7600), (1650, 4000, 3000)]
+    frames = [{"timestamp": 0, "events": []}]
+    for t, x, y in deaths:
+        frames.append({"timestamp": t * 1000, "events": [{"type": "CHAMPION_KILL", "timestamp": t * 1000, "victimId": 5, "killerId": 8,
+                                                          "position": {"x": x, "y": y}}]})
+    for t in (120, 400, 900, 1500):
+        frames.append({"timestamp": t * 1000, "events": [{"type": "WARD_PLACED", "timestamp": t * 1000, "creatorId": 5, "wardType": "YELLOW_TRINKET"}]})
+    return detail, {"frames": frames}, me_key
+
+
+def fake_history_metrics():
+    """Ten past support games (newest first): vision and deaths improved over time."""
+    def g(d, vis, kp, win):
+        return {"game_id": 1, "role": "UTILITY", "m": {"role": "UTILITY", "dur": 1700, "win": win, "k": 1, "d": d, "a": 10, "cs_pm": 0.7,
+                                                       "vis_pm": vis, "wards_pm": 0.4, "cw": 1, "deaths_pm": round(d / 28, 3), "kp": kp, "dmg_share": 0.08}}
+    return [g(5, 1.5, 0.62, True), g(6, 1.4, 0.6, False), g(4, 1.7, 0.66, True), g(7, 1.2, 0.55, False), g(5, 1.6, 0.6, True),
+            g(9, 0.8, 0.5, False), g(8, 0.9, 0.52, False), g(7, 1.0, 0.5, False), g(10, 0.7, 0.45, False), g(8, 1.1, 0.55, True)]
+

@@ -2,6 +2,7 @@
 
 No AI at runtime: pre-written champion notes from the data pack + template sentences.
 """
+from . import marks
 from .pack import ROLES
 
 SCALE = {"E": 0, "M": 1, "L": 2}
@@ -108,8 +109,12 @@ def assess(engine, draft, profile):
         gameplan = {"champ": mine, "styles": ch[mine]["styles"], "play": ch[mine].get("play", ""), "build": build,
                     "situational": engine.situational(mine, enemies, build)}
 
+    for c in enemies:  # champions you marked as "hate" go first
+        if marks.get(c) == "hate":
+            traps.insert(0, {"id": c, "head": "You hate this one", "tail": "play it safe and don't tilt", "hate": True})
+
     return {"headline": headline, "plan": plan, "tags": tags[:4], "matchups": matchups, "gameplan": gameplan,
-            "lane": lane, "traps": traps[:4], "allies": allies, "enemies": enemies}
+            "lane": lane, "traps": traps[:5], "allies": allies, "enemies": enemies}
 
 
 def split_note(text, name):

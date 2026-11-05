@@ -5,7 +5,7 @@ import math
 import os
 import time
 
-from . import paths
+from . import breakdown, paths
 
 log = logging.getLogger("pickbans.profile")
 
@@ -124,7 +124,7 @@ class Profile:
     def backfill(self, lcu, engine, limit=25):
         """Find who you laned against in your recent games (one client call per game, done once then cached)."""
         from .draft import infer_roles
-        known = {h.get("game_id") for h in self.history if h.get("vs")}
+        known = {h.get("game_id") for h in self.history if h.get("vs") and h.get("m")}
         added = 0
         for r in self.recent[:limit]:
             if r["game_id"] in known or not r["game_id"]:
@@ -146,10 +146,13 @@ class Profile:
                 infer_roles(enemies, engine.role_rate)
                 vs = next((e["champ"] for e in enemies if e["role"] == role), None)
                 r["role"] = role
-                if vs:
+                metrics = breakdown.metrics_of(g, mine.get("championId"))
+                if vs or metrics:
                     self.history = [h for h in self.history if h.get("game_id") != r["game_id"]]
-                    self.history.append({"game_id": r["game_id"], "me": r["champ"], "role": role, "vs": vs,
-                                         "win": r["win"], "t": r["t"]})
+                    entry = {"game_id": r["game_id"], "me": r["champ"], "role": role, "vs": vs, "win": r["win"], "t": r["t"]}
+                    if metrics:
+                        entry["m"] = breakdown.compact(dict(metrics, role=metrics.get("role") or role))
+                    self.history.append(entry)
                     added += 1
             except Exception as e:
                 log.warning("backfill %s: %s", r["game_id"], e)

@@ -110,6 +110,7 @@ def build_pack(kb_dir):
     }
     pack["items"] = build_items(kb_dir, version)
     pack["situational"] = build_situational(kb_dir, version)
+    pack["item_info"] = build_item_info(version)
     pack["rune_icons"] = {str(r["id"]): r["icon"] for style in net.get_json(f"{DDRAGON}/cdn/{version}/data/en_US/runesReforged.json")
                           for slot in style["slots"] for r in slot["runes"]}
     stats_file = os.path.join(kb_dir, "stats.json")
@@ -124,12 +125,39 @@ def build_pack(kb_dir):
     return pack
 
 
+_ITEM_CACHE = {}
+
+
+def riot_items(version):
+    if version not in _ITEM_CACHE:
+        _ITEM_CACHE[version] = net.get_json(f"{DDRAGON}/cdn/{version}/data/en_US/item.json")["data"]
+    return _ITEM_CACHE[version]
+
+
+# Riot tags these "lifesteal / omnivamp", but the healing is conditional or tiny: no reason to buy anti-heal against them
+HEAL_NOT_REAL = {"3156", "3008", "3168"}   # Maw of Malmortius, Gluttonous Greaves, Immortal Path
+HEAL_EXTRA = {"2502"}                      # Unending Despair (heals but isn't tagged)
+
+
+def build_item_info(version):
+    """{item id: {tags, gold}} for Summoner's Rift items: lets the app read what enemies are building (lifesteal, armor…)."""
+    out = {}
+    for iid, it in riot_items(version).items():
+        if not (it.get("maps") or {}).get("11") or int(iid) >= 100000:
+            continue
+        gold, tags = (it.get("gold") or {}).get("total", 0), it.get("tags") or []
+        if gold >= 300 and tags and "Consumable" not in tags and "Trinket" not in tags:
+            heal = (bool({"LifeSteal", "SpellVamp"} & set(tags)) and iid not in HEAL_NOT_REAL) or iid in HEAL_EXTRA
+            out[iid] = {"tags": tags, "gold": gold, "heal": heal}
+    return out
+
+
 def build_situational(kb_dir, version):
     """Situational item table + champion groups. Items Riot no longer has get dropped."""
     path = os.path.join(kb_dir, "situational.txt")
     if not os.path.exists(path):
         return {"groups": {}, "rows": []}
-    riot = net.get_json(f"{DDRAGON}/cdn/{version}/data/en_US/item.json")["data"]
+    riot = riot_items(version)
     groups, rows, dropped = {}, [], []
     for line in _lines(path):
         if line.startswith("@"):
@@ -151,7 +179,7 @@ def build_items(kb_dir, version):
     path = os.path.join(kb_dir, "items.txt")
     if not os.path.exists(path):
         return []
-    riot = net.get_json(f"{DDRAGON}/cdn/{version}/data/en_US/item.json")["data"]
+    riot = riot_items(version)
     out, dropped = [], []
     for line in _lines(path):
         iid, name, answer = [x.strip() for x in line.split("|", 2)]

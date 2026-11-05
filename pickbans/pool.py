@@ -5,7 +5,7 @@ The whole app recommends from this pool first. A champion outside it never shows
 import json
 import os
 
-from . import paths
+from . import marks, paths
 from .pack import ROLES
 
 POOL_FILE = os.path.join(paths.USER_DIR, "pool.json")
@@ -71,18 +71,23 @@ def build(engine, profile, ov):
     """Final pool: {role: [{id, source, why, games, wins, mastery}]} sorted by how much you play it, plus what you removed."""
     det = detected(engine, profile)
     pool, removed = {}, {}
+    for cid in marks.liked():  # champions you love / like belong in your pool, in their usual lanes
+        if cid in engine.champs:
+            for role in _usual_lanes(engine, cid):
+                det[role].setdefault(cid, "you " + marks.get(cid))
     for role in ROLES:
         entries = []
         ids = list(det[role]) + [c for c in ov["add"][role] if c not in det[role]]
         for cid in ids:
-            if cid in ov["remove"][role] or cid not in engine.champs:
+            if cid in ov["remove"][role] or cid not in engine.champs or marks.get(cid) == "ban":
                 continue
             rec = profile.games.get(cid, {})
             entries.append({"id": cid, "source": "added" if cid in ov["add"][role] else "detected",
+                            "mark": marks.get(cid),
                             "why": det[role].get(cid, "added by you"),
                             "games": (rec.get("roles") or {}).get(role, 0), "wins": rec.get("wins", 0),
                             "mastery": profile.mastery.get(cid, 0)})
-        entries.sort(key=lambda e: (e["source"] != "added", -e["games"], -e["mastery"]))
+        entries.sort(key=lambda e: (e["source"] != "added", e["mark"] != "love", -e["games"], -e["mastery"]))
         pool[role] = entries
         removed[role] = [c for c in ov["remove"][role] if c in engine.champs]
     return {"roles": pool, "removed": removed}

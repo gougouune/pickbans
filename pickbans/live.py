@@ -31,6 +31,8 @@ class LiveTracker:
         self.by_name.update({norm(cid): cid for cid in engine.champs})
         self.hit6 = {}
         self.roles_checked = False
+        self.sit_ids = None      # last set of "for this game" items, to tell when it changes
+        self.sit_changed = None  # {clock, time, text}: what changed last
 
     def champ_of(self, p):
         raw = p.get("rawChampionName", "")
@@ -54,10 +56,21 @@ class LiveTracker:
                 "level": p.get("level", 1),
                 "kills": (p.get("scores") or {}).get("kills", 0),
                 "dead": p.get("isDead", False),
+                "deaths": (p.get("scores") or {}).get("deaths", 0),
+                "items": [str(i.get("itemID")) for i in (p.get("items") or []) if i.get("itemID")],
                 "smite": any("smite" in ((p.get("summonerSpells") or {}).get(k) or {}).get("displayName", "").lower()
                              for k in ("summonerSpellOne", "summonerSpellTwo")),
             })
         return out
+
+    def enemies_live(self, data):
+        """Enemy champions with what they own right now (the scoreboard shows the same)."""
+        return [{"champ": p["champ"], "items": p["items"], "kills": p["kills"], "deaths": p["deaths"]}
+                for p in self.players(data) if not p["ally"] and p["champ"]]
+
+    def my_items(self, data):
+        me = next((p for p in self.players(data) if p["is_me"]), None)
+        return me["items"] if me else []
 
     def fix_roles(self, draft, data):
         """Champ select only lets us GUESS enemy lanes. In game, Riot gives each player's real position

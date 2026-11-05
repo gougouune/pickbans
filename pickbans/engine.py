@@ -2,6 +2,7 @@
 
 Pure functions, no I/O — recomputed from scratch on every draft change (fast: ~170 champs).
 """
+from . import marks
 from .pack import DDRAGON, ROLES
 
 TIER_VALUE = {"S": 1.0, "A": 0.8, "B": 0.6, "C": 0.4, "D": 0.25}
@@ -314,7 +315,11 @@ class Engine:
             total -= 0.06
         if ctx["no_profile"]:
             total += 0.04 * (2 - self.champs[cid]["difficulty"])
+        mark = marks.get(cid)
+        total += marks.BONUS.get(mark, 0)
         reasons = []
+        if mark in ("love", "like"):
+            reasons.append("You " + mark + " playing it")
         rec = profile.games.get(cid)
         if comfort >= 0.4:
             reasons.append(f"You play it a lot ({rec['games']} recent games)" if rec and rec["games"] >= 3 else "High mastery")
@@ -355,7 +360,7 @@ class Engine:
                "ep": self.enemy_profile(enemies), "no_profile": no_profile}
 
         mine = poolmod.ids(pool, role)
-        available = [c for c in mine if c not in taken and profile.owns(c)]
+        available = [c for c in mine if c not in taken and profile.owns(c) and marks.get(c) != "ban"]
         scored = {cid: self.score(cid, ctx) for cid in available}
         by = lambda key: sorted(scored.values(), key=key, reverse=True)
         lane_first = lambda r: dict(r, reasons=[r["lane_why"]] + [x for x in r["reasons"] if x != r["lane_why"]][:1]) if r["lane_why"] else r
@@ -390,7 +395,7 @@ class Engine:
         from .pool import similarity
         out = []
         for cid in self.champs:
-            if cid in mine or cid in taken or not profile.owns(cid) or not self.role_ok(cid, role, profile):
+            if cid in mine or cid in taken or not profile.owns(cid) or not self.role_ok(cid, role, profile) or marks.get(cid) == "ban":
                 continue
             if self.champs[cid]["difficulty"] > 2:
                 continue
@@ -427,7 +432,7 @@ class Engine:
             "class_banned:Marksman": banned_marksmen >= 3,
         }
         for c in self.pack["cheese"]:
-            if c["role"] != role or c["id"] in taken or not profile.owns(c["id"]):
+            if c["role"] != role or c["id"] in taken or not profile.owns(c["id"]) or marks.get(c["id"]) == "ban":
                 continue
             if not cond.get(c["trigger"], False):
                 continue
@@ -488,6 +493,12 @@ class Engine:
             if cid in worst:
                 s += 0.6
                 why = (f"You lose to it ({round(worst[cid] * 100)}% wins)", 0)
+            if marks.get(cid) == "hate":
+                s += 0.7
+                why = ("You hate playing against it", 0)
+            if marks.get(cid) == "ban":
+                s += 5.0
+                why = ("On your ban list", 0)
             if not mine:  # no pool yet: fall back to what's strong in the lane
                 tv = TIER_VALUE[self.tier(cid, role)]
                 s += 0.5 * tv
@@ -496,6 +507,8 @@ class Engine:
                 s += min(0.1, st["pr"] * 1.0)  # popular = you'll actually face it
             if s >= 0.15 and why:
                 out.append({"id": cid, "score": round(s, 2), "reasons": [why[0]]})
+            elif marks.get(cid) in ("ban", "hate"):  # marked champions always get a slot, even outside your lane
+                out.append({"id": cid, "score": round(s + 1, 2), "reasons": [why[0] if why else "You marked it"]})
         out.sort(key=lambda r: -r["score"])
         return out[:3]
 
@@ -571,20 +584,80 @@ class Engine:
             out.append(("stealth", in_group("stealth")))
         return out
 
-    def situational(self, cid, enemies, build=None):
-        """Items for THIS game, on top of the normal build. Max 4 + a control ward, one pair of boots."""
+    def live_triggers(self, enemies):
+        """What the enemy team is ACTUALLY doing right now, from their items and kills (Riot shows both in game).
+        enemies: [{champ, items: [ids], kills, deaths}]. Returns ([(trigger, champs, why)], damage_mix_known)."""
+        info = self.pack.get("item_info", {})
+        name = lambda c: self.champs[c]["name"]
+        per = {}
+        for e in enemies:
+            c = e.get("champ")
+            if not c or c not in self.champs:
+                continue
+            its = [info[str(i)] for i in e.get("items") or [] if str(i) in info]
+            has = lambda tag, g=900: sum(1 for it in its if tag in it["tags"] and it["gold"] >= g)
+            per[c] = {"heal": any(it.get("heal") and it["gold"] >= 800 for it in its),
+                      "armor": has("Armor"), "mr": has("SpellBlock"), "hp": has("Health"),
+                      "ad": has("Damage", 1100), "ap": has("SpellDamage", 1100), "crit": has("CriticalStrike", 1000) > 0,
+                      "kills": e.get("kills", 0), "deaths": e.get("deaths", 0)}
+        out = []
+        healers = [c for c, p in per.items() if p["heal"]]
+        if healers:
+            out.append(("heal", healers, ", ".join(name(c) for c in healers[:2]) + ": lifesteal / omnivamp item"))
+        fed = [c for c, p in per.items() if p["kills"] >= 5 and p["kills"] - p["deaths"] >= 4]
+        for c in fed:
+            kind = self.champs[c]["dmg"]
+            if kind in ("AD", "AP"):
+                out.append(("ad_heavy" if kind == "AD" else "ap_heavy", [c],
+                            f"{name(c)} is fed ({per[c]['kills']}/{per[c]['deaths']})"))
+        armor = [c for c, p in per.items() if p["armor"] >= 2]
+        if sum(p["armor"] for p in per.values()) >= 4 or any(p["armor"] >= 3 for p in per.values()):
+            out.append(("armor_stack", armor or [c for c, p in per.items() if p["armor"]], "they're stacking armor"))
+        mr = [c for c, p in per.items() if p["mr"] >= 2]
+        if sum(p["mr"] for p in per.values()) >= 4 or any(p["mr"] >= 3 for p in per.values()):
+            out.append(("mr_stack", mr or [c for c, p in per.items() if p["mr"]], "they're stacking magic resist"))
+        tanky = [c for c, p in per.items() if p["hp"] >= 2 and (p["armor"] or p["mr"])]
+        if len(tanky) >= 2:
+            out.append(("tanks", tanky, "they're building health"))
+        crit = [c for c, p in per.items() if p["crit"]]
+        if crit:
+            out.append(("crit", crit, "crit items"))
+        ad, ap = sum(p["ad"] for p in per.values()), sum(p["ap"] for p in per.values())
+        known = ad + ap >= 6
+        if known and ap <= 0.25 * (ad + ap):
+            out.append(("ad_heavy", [], f"their items are almost all AD ({ad} vs {ap})"))
+        elif known and ad <= 0.25 * (ad + ap):
+            out.append(("ap_heavy", [], f"their items are almost all AP ({ap} vs {ad})"))
+        return out, known
+
+    def situational(self, cid, enemies, build=None, live=None, owned=()):
+        """Items for THIS game, on top of the normal build. Max 4 + a control ward, one pair of boots.
+        live = enemy items/kills right now (see live_triggers): checked first, and it overrides the champion-based guess."""
         table = self.pack.get("situational", {}).get("rows", [])
         if not table or cid not in self.champs:
             return []
         who = self.item_class(cid)
         v = self.pack["version"]
-        have = {str(i["id"]) for k in ("core", "boots") for i in (build or {}).get(k, [])}
+        core_ids = {str(i["id"]) for k in ("core", "boots") for i in (build or {}).get(k, [])}
+        owned_ids = {str(i) for i in owned}
+        dynamic, known = self.live_triggers(live) if live else ([], False)
+        triggers, why_live = [], {}
+        for trig, champs, why in dynamic:
+            why_live.setdefault(trig, why)
+            triggers.append((trig, champs))
+        for trig, champs in self.enemy_triggers(enemies):
+            if known and trig in ("ad_heavy", "ap_heavy"):
+                continue                      # real items beat the champion-based guess
+            if trig in why_live:              # already seen live: merge the champions
+                triggers = [(t, list(dict.fromkeys(c + champs)) if t == trig else c) for t, c in triggers]
+            else:
+                triggers.append((trig, champs))
         out, seen, boots = [], set(), False
-        for trigger, champs in self.enemy_triggers(enemies):
+        for trigger, champs in triggers:
             for row in table:
                 if row["trigger"] != trigger or not ({"all", who} & set(row["who"])):
                     continue
-                if row["id"] in seen or row["id"] in have:
+                if row["id"] in seen or row["id"] in owned_ids:
                     continue
                 is_boots = row["why"].startswith("boots:")
                 if is_boots and boots:
@@ -594,7 +667,8 @@ class Engine:
                 seen.add(row["id"])
                 boots = boots or is_boots
                 out.append({"id": row["id"], "name": row["name"], "why": row["why"], "trigger": trigger,
-                            "champs": champs[:3], "img": f"{DDRAGON}/cdn/{v}/img/item/{row['id']}.png"})
+                            "live": why_live.get(trigger), "champs": champs[:3], "early": row["id"] in core_ids,
+                            "img": f"{DDRAGON}/cdn/{v}/img/item/{row['id']}.png"})
         return out
 
     def my_pick(self, cid, opp, ctx):

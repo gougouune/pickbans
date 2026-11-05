@@ -40,3 +40,8 @@ dive | marksman | 3026 | Guardian Angel | a second life when they dive you
 shields | assassin, bruiser | 6695 | Serpent's Fang | weakens their shields
 crit | tank | 3143 | Randuin's Omen | less damage from crits
 stealth | all | 2055 | Control Ward | reveals invisible enemies: keep one on you
+armor_stack | marksman | 3036 | Lord Dominik's Regards | their armor is stacking: armor penetration
+armor_stack | assassin | 6694 | Serylda's Grudge | their armor is stacking: armor penetration + a slow
+armor_stack | bruiser | 3071 | Black Cleaver | shreds their stacked armor
+mr_stack | mage | 3135 | Void Staff | their magic resist is stacking: magic penetration
+mr_stack | mage | 8010 | Bloodletter's Curse | shreds their stacked magic resist

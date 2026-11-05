@@ -11,7 +11,7 @@ import time
 import webbrowser
 from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer
 
-from . import __version__, demo, live, net, paths
+from . import __version__, breakdown, demo, live, marks, net, paths
 from . import pool as poolmod
 from .assess import assess
 from .draft import infer_roles, parse_session
@@ -26,6 +26,15 @@ log = logging.getLogger("pickbans")
 IN_GAME = {"GameStart", "InProgress", "Reconnect"}
 HOME_CACHE = os.path.join(paths.USER_DIR, "home.json")
 SETTINGS_FILE = os.path.join(paths.USER_DIR, "settings.json")
+LAST_GAME_FILE = os.path.join(paths.USER_DIR, "last_game.json")
+
+
+def _read_last_game():
+    try:
+        with open(LAST_GAME_FILE, encoding="utf-8") as f:
+            return json.load(f)
+    except (OSError, ValueError):
+        return None
 
 
 def load_settings():
@@ -75,6 +84,14 @@ class App:
         self.state = {"status": "starting", "seq": 0, "message": "Starting…", "version": __version__,
                       "patch": self.pack["version"], "meta_source": self.pack.get("meta_source", "baseline"),
                       "stats_rank": self.pack.get("stats_rank")}
+        marks.load()
+        self.state["marks"] = dict(marks.MARKS)
+        self.state["last_game"] = _read_last_game()   # the last game's breakdown, even with League closed
+        self.in_game = False
+        self.game_started = None
+        self.known_games = set()
+        self.demo_post = False
+        self.cur_game = None   # id of the champ select we're in, so a new one starts from a clean slate
         self.overrides = poolmod.load_overrides()
         self.settings = load_settings()
         self.state["settings"] = self.settings
@@ -169,16 +186,23 @@ class App:
                 self.on_session(s)
             time.sleep(0.5)
         elif phase in IN_GAME:
+            if not self.in_game:
+                self.in_game = True
+                self.game_started = time.time()
+                self.known_games = {r["game_id"] for r in self.profile.recent}  # so we can tell which game is the NEW one
             self.tick_live(live.fetch())
             time.sleep(2)
         else:
+            if self.in_game:               # the game just ended
+                self.in_game = False
+                self.on_game_end()
             self.tracker = None
             if self.imported or self.state.get("rune_import"):
                 self.imported = None
                 self.set(rune_import=None)
             if phase in POST_GAME:
                 self.profile_stale = True
-            if self.state.get("status") != "assessment" or phase in ("Lobby", "Matchmaking", "ReadyCheck"):
+            if self.state.get("status") not in ("assessment", "postgame") or phase in ("Lobby", "Matchmaking", "ReadyCheck"):
                 msg = {"Lobby": "In lobby — queue up!", "Matchmaking": "In queue…", "ReadyCheck": "Match found!"}.get(phase, "Waiting for champ select…")
                 self.set(status="idle", message=msg, in_select=False,
                          **({"profile": self.profile.to_json()} if self.profile.name else {}))
@@ -197,6 +221,19 @@ class App:
                     json.dump({"profile_data": p.to_cache()}, f)
             except OSError:
                 pass
+
+    def mark(self, champ, kind):
+        """Right-click menu: set / clear your opinion of a champion, then refresh everything that depends on it."""
+        marks.set_mark(champ, kind)
+        self.set(marks=dict(marks.MARKS))
+        if self.demo_steps is None:
+            self.show_home(self.profile)
+        else:
+            self.set(pool=self.current_pool())
+        if self.state.get("status") == "champ_select" and self.last_session:
+            self.on_session(self.last_session)
+        elif self.state.get("status") == "assessment" and self.last_draft:
+            self.show_assessment()
 
     def edit_pool(self, action, role, champ):
         if self.demo_steps is not None:
@@ -230,22 +267,94 @@ class App:
         finally:
             self.profile_loading = False
 
+    def reset_game_state(self):
+        """Forget everything about the previous game (in-game panel, runes, draft)."""
+        self.tracker = None
+        self.imported = None
+        self.last_draft = None
+        self.set(assessment=None, live=None, rune_import=None)
+
     def on_session(self, s):
         d = parse_session(s, self.engine.key_to_id)
+        gid = d.get("game_id") or "?"
+        if gid != self.cur_game:          # a NEW champ select: start clean
+            self.cur_game = gid
+            self.reset_game_state()
         infer_roles(d["enemies"], self.engine.role_rate)
         self.last_draft = d
         self.last_session = s
         locked = next((a["champ"] for a in d["allies"] if a["is_me"] and a["champ"]), None)
         recs = self.engine.recommend(d, self.profile, self.current_pool())
-        extra = {}
+        assessment = None   # only exists once the draft is locked (never left over from an earlier game)
         if d["phase"] == "FINALIZATION":
-            extra["assessment"] = assess(self.engine, d, self.profile)
+            assessment = assess(self.engine, d, self.profile)
             me = next((a for a in d["allies"] if a["is_me"]), {})
             if me.get("champ") and not self.demo_steps:
                 self.profile.log_game(d["game_id"], me["champ"], recs["role"], recs["opponent"])
-        self.set(status="champ_select", in_select=True, draft=d, recs=recs, message="", live=None, **extra)
+        self.set(status="champ_select", in_select=True, draft=d, recs=recs, message="", live=None, assessment=assessment)
         if locked and locked != self.imported and self.settings.get("auto_runes"):
             self.import_runes(locked, recs["role"])
+
+    def on_game_end(self):
+        """The game is over: show the post-match screen and analyse the game from the client's match history."""
+        d = self.last_draft or {}
+        me = next((a for a in d.get("allies", []) if a["is_me"]), {})
+        ctx = {"champ": me.get("champ"), "role": d.get("my_role") or self.profile.main_role(),
+               "started": self.game_started, "known": set(self.known_games)}
+        self.game_started = None
+        self.tracker = None
+        self.imported = None
+        self.last_draft = None
+        if not self.lcu:
+            return
+        log.info("game over (%s): analysing", ctx["champ"])
+        self.set(status="postgame", analyzing=True, assessment=None, live=None, rune_import=None, in_select=False)
+        threading.Thread(target=self.run_breakdown, args=(self.lcu, ctx), daemon=True).start()
+
+    def run_breakdown(self, lcu, ctx):
+        """Find the game that just finished in the match history (it can take a minute to show up) and analyse it."""
+        try:
+            game = None
+            deadline = time.time() + 180
+            while game is None and time.time() < deadline:
+                for g in lcu.match_history(4):
+                    dur = g.get("gameDuration") or 0
+                    dur = dur / 1000 if dur > 10000 else dur
+                    ended = (g.get("gameCreation") or 0) / 1000 + dur
+                    # the game that just finished ended AFTER the one before it, i.e. after we saw this game start
+                    if g.get("gameId") not in ctx["known"] and ended >= (ctx["started"] or 0) - 180 and g.get("mapId") in (None, 11):
+                        game = g
+                        break
+                if game is None:
+                    time.sleep(6)
+            if game is None:
+                log.info("breakdown: the finished game never showed up in the match history")
+                return
+            gid = game["gameId"]
+            detail = lcu.get(f"/lol-match-history/v1/games/{gid}", timeout=20) or {}
+            timeline = None
+            try:
+                timeline = lcu.get(f"/lol-match-history/v1/game-timelines/{gid}", timeout=30)
+            except Exception as e:     # not every client version has it: we just lose the timing tips
+                log.info("breakdown: no timeline (%s)", e)
+            key = ((game.get("participants") or [{}])[0]).get("championId")
+            champ = self.engine.key_to_id.get(key) or ctx["champ"]
+            b = breakdown.build(detail, timeline, key, champ, ctx["role"], self.profile.history, gid)
+            frames = (timeline or {}).get("frames")
+            log.info("breakdown %s: detail keys=%s timeline frames=%s -> %s", gid, sorted(detail)[:12],
+                     len(frames) if isinstance(frames, list) else None, "ok" if b else "unreadable")
+            if b:
+                try:
+                    with open(LAST_GAME_FILE, "w", encoding="utf-8") as f:
+                        json.dump(b, f)
+                except OSError:
+                    pass
+                self.set(last_game=b)
+        except Exception:
+            log.exception("breakdown failed")
+        finally:
+            self.set(analyzing=False)
+            self.profile_stale = True      # refresh your games so the new one joins the notebook and the trend
 
     def set_setting(self, key, value):
         self.settings[key] = value
@@ -285,7 +394,33 @@ class App:
         if self.last_draft and (roles_fixed or self.state.get("status") != "assessment"):
             self.show_assessment()
         if data and self.last_draft:
-            self.set(live=self.tracker.update(data, self.last_draft))
+            lv = self.tracker.update(data, self.last_draft)
+            lv.update(self.live_items(data, lv))
+            self.set(live=lv)
+
+    def live_items(self, data, lv):
+        """"For this game" items, re-checked on every poll (so after every kill and every enemy purchase)."""
+        d = self.last_draft
+        me = next((a for a in d["allies"] if a["is_me"]), {})
+        champ = me.get("champ") or me.get("hover")
+        if not champ or champ not in self.engine.champs:
+            return {}
+        role = d.get("my_role") or self.profile.main_role() or self.engine.champs[champ]["positions"][0]
+        enemies = self.tracker.enemies_live(data)
+        owned = self.tracker.my_items(data)
+        items = self.engine.situational(champ, [e["champ"] for e in enemies], self.engine.build(champ, role),
+                                        live=enemies, owned=owned)
+        ids = [x["id"] for x in items]
+        t = self.tracker
+        if t.sit_ids is None:   # first look: say what the live data gave us, to check it against the real client
+            log.info("live items: me=%d items, enemies=%s", len(owned), [len(e["items"]) for e in enemies])
+        if t.sit_ids is not None and ids != t.sit_ids:
+            new = [x for x in items if x["id"] not in t.sit_ids]
+            if new:  # something new to buy: say why, so the change isn't a mystery
+                t.sit_changed = {"clock": lv["clock"], "time": lv["time"],
+                                 "text": ", ".join(x["name"] for x in new[:2]) + (f" — {new[0]['live']}" if new[0].get("live") else "")}
+        t.sit_ids = ids
+        return {"situational": items, "owned": sorted(set(owned)), "sit_changed": t.sit_changed}
 
     # ---------- demo ----------
     def start_demo(self):
@@ -295,6 +430,7 @@ class App:
         self.demo_steps = demo.timeline(key_of)
         self.demo_t0 = time.time()
         self.demo_game_t0 = None
+        self.demo_post = False
         self.tracker = None
         self.last_draft = None
         self.demo_i = 0
@@ -309,6 +445,7 @@ class App:
         self.profile = getattr(self, "saved_profile", self.profile)
         self.last_draft = None
         self.set(demo=False, status="starting", message="", assessment=None, draft=None, recs=None, live=None,
+                 last_game=_read_last_game(), analyzing=False,
                  profile=self.profile.to_json(), home=build_home(self.engine, self.profile, self.current_pool()),
                  pool=self.current_pool())
 
@@ -321,9 +458,17 @@ class App:
                 self.on_session(s)
             else:
                 self.demo_game_t0 = time.time()
-        if getattr(self, "demo_game_t0", None) and self.demo_i >= len(self.demo_steps):
+        if getattr(self, "demo_game_t0", None) and self.demo_i >= len(self.demo_steps) and not self.demo_post:
+            if time.time() - self.demo_game_t0 > 80:   # the fake game is over: show the post-match screen
+                self.demo_post = True
+                detail, tl, ck = demo.fake_game(lambda c: self.id_to_key[c])
+                b = breakdown.build(detail, tl, ck, "Nami", "UTILITY", demo.fake_history_metrics(), 123)
+                self.reset_game_state()
+                self.set(status="postgame", analyzing=False, last_game=b, in_select=False)
+                return
             names = {cid: c["name"] for cid, c in self.engine.champs.items()}
-            self.tick_live(demo.fake_live(time.time() - self.demo_game_t0, names))
+            mine = [i["id"] for k in ("core", "boots") for i in (self.engine.build("Nami", "UTILITY") or {}).get(k, [])]
+            self.tick_live(demo.fake_live(time.time() - self.demo_game_t0, names, mine))
 
 
 # ---------- web server ----------
@@ -378,6 +523,15 @@ def make_handler(app):
             return super().do_GET()
 
         def do_POST(self):
+            if self.path == "/api/mark":
+                try:
+                    body = json.loads(self.rfile.read(int(self.headers.get("Content-Length") or 0)) or b"{}")
+                    if body.get("champ") not in app.engine.champs:
+                        raise ValueError("unknown champion")
+                    app.mark(body["champ"], body.get("mark"))
+                    return self._json({"ok": True})
+                except Exception as e:
+                    return self._json({"ok": False, "error": str(e)})
             if self.path in ("/api/runes", "/api/settings"):
                 body = json.loads(self.rfile.read(int(self.headers.get("Content-Length") or 0)) or b"{}")
                 if self.path == "/api/settings":
