@@ -299,12 +299,12 @@ function section(title, list, empty, hint = "", opts = {}) {
 function champSelect(s) {
   const d = s.draft, r = s.recs;
   const me = d.allies.find((a) => a.is_me) || {};
-  const role = ROLE[r.role] || r.role;
+  const role = r.any_role ? "Any role" : (ROLE[r.role] || r.role);
   let banner;
   if (d.phase === "FINALIZATION") banner = `<div class="banner"><b>Draft locked</b><span class="muted">Assessment below ↓</span></div>`;
   else if (d.my_action === "ban") banner = `<div class="banner turn"><b>Your turn to BAN</b><span class="muted">${role}</span></div>`;
   else if (d.my_action === "pick") banner = `<div class="banner turn"><b>Your turn to PICK</b><span class="muted">${role}</span></div>`;
-  else banner = `<div class="banner"><b>${d.phase === "PLANNING" ? "Planning" : "Champ select"}</b><span class="muted">You: ${role}${r.role_guessed ? " (guessed)" : ""}</span></div>`;
+  else banner = `<div class="banner"><b>${d.phase === "PLANNING" ? "Planning" : "Champ select"}</b><span class="muted">${r.any_role ? "From your whole pool" : `You: ${role}${r.role_guessed ? " (guessed)" : ""}`}</span></div>`;
 
   const slot = (p, isAlly) => {
     const id = p.champ || p.hover;
@@ -331,7 +331,7 @@ function champSelect(s) {
       : `All your ${ROLE[r.role] || r.role} champions are banned or taken.`;
     html += section("Your picks", r.picks, noPool, "from your pool, for this draft");
     const opps = (r.opponents || []).map(nm).join(" + ");
-    html += section("Lane counter", r.counter, opps ? `None of your champions counter ${opps} — play safe early.` : "Waiting for your lane opponent to lock…", opps ? `vs ${opps} · your pool` : "your pool");
+    if (!r.any_role) html += section("Lane counter", r.counter, opps ? `None of your champions counter ${opps} — play safe early.` : "Waiting for your lane opponent to lock…", opps ? `vs ${opps} · your pool` : "your pool");
     if (r.try && r.try.length) html += `<div class="try-sec">${section("Try this", r.try, "", "not in your pool")}</div>`;
     if (r.cheese.length) html += `<div class="try-sec">${section("Cheese ?", r.cheese, "", "oh btw")}</div>`;
   }

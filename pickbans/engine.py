@@ -346,6 +346,7 @@ class Engine:
         from . import pool as poolmod
         if pool is None:
             pool = poolmod.build(self, profile, {"add": {r: [] for r in ROLES}, "remove": {r: [] for r in ROLES}})
+        any_role = not draft.get("my_role")      # Swiftplay & co: nobody is assigned a lane
         role = draft.get("my_role") or profile.main_role() or "MIDDLE"
         allies = [a["champ"] for a in draft["allies"] if a["champ"] and not a["is_me"]]
         hovers = [a["hover"] for a in draft["allies"] if a["hover"] and not a["is_me"]]
@@ -359,9 +360,21 @@ class Engine:
         ctx = {"role": role, "profile": profile, "allies": allies, "hovers": hovers, "opp": opp, "opp2": opp2,
                "ep": self.enemy_profile(enemies), "no_profile": no_profile}
 
-        mine = poolmod.ids(pool, role)
+        if any_role:
+            # every champion of your pool, each judged in the lane you play it in (most games / mastery wins)
+            best = {}
+            for r in ROLES:
+                for e in pool["roles"].get(r, []):
+                    key = (e["games"], e["mastery"])
+                    if e["id"] not in best or key > best[e["id"]][0]:
+                        best[e["id"]] = (key, r)
+            lane_of = {c: r for c, (_, r) in best.items()}
+            mine = sorted(lane_of, key=lambda c: best[c][0], reverse=True)
+        else:
+            mine = poolmod.ids(pool, role)
+            lane_of = {c: role for c in mine}
         available = [c for c in mine if c not in taken and profile.owns(c) and marks.get(c) != "ban"]
-        scored = {cid: self.score(cid, ctx) for cid in available}
+        scored = {cid: self.score(cid, dict(ctx, role=lane_of[cid])) for cid in available}
         by = lambda key: sorted(scored.values(), key=key, reverse=True)
         lane_first = lambda r: dict(r, reasons=[r["lane_why"]] + [x for x in r["reasons"] if x != r["lane_why"]][:1]) if r["lane_why"] else r
 
@@ -372,8 +385,12 @@ class Engine:
                        if r["parts"]["lane"] > 0.55][:3]
 
         my_champ = me.get("champ")
+        pick_champ = my_champ or me.get("hover")
+        ctx_pick = dict(ctx, role=lane_of.get(pick_champ, role))
         return {
             "role": role,
+            "any_role": any_role,
+            "my_lane": lane_of.get(pick_champ, role),
             "role_guessed": not draft.get("my_role"),
             "opponent": opp,
             "opponents": [o for o in (opp, opp2) if o],
@@ -381,12 +398,12 @@ class Engine:
             "pool_available": len(available),
             "picks": picks,
             "counter": counter,
-            "try": self.try_this(role, ctx, taken, mine, profile, many=len(available) < 2),
-            "cheese": self.cheese(role, ctx, taken, draft["bans"], profile),
-            "bans": self.ban_recs(role, draft, profile, mine, hovers),
+            "try": [] if any_role else self.try_this(role, ctx, taken, mine, profile, many=len(available) < 2),
+            "cheese": [] if any_role else self.cheese(role, ctx, taken, draft["bans"], profile),
+            "bans": [] if any_role else self.ban_recs(role, draft, profile, mine, hovers),
             "missing": self.missing(allies + ([my_champ] if my_champ else []), hovers + ([me.get("hover")] if me.get("hover") else [])),
             "enemy_tags": ctx["ep"]["tags"],
-            "my_pick": self.my_pick(my_champ or me.get("hover"), opp, ctx) if (my_champ or me.get("hover")) else None,
+            "my_pick": self.my_pick(pick_champ, opp, ctx_pick) if pick_champ else None,
         }
 
     def try_this(self, role, ctx, taken, mine, profile, many=False):

@@ -27,10 +27,11 @@ def parse_session(s, key_to_id):
         if cid and cid not in bans:
             bans.append(cid)
 
+    no_actions = not any(s.get("actions") or [])   # some modes have no draft: your champion is just on myTeam
     allies = []
     for p in s.get("myTeam", []):
         cell = p.get("cellId")
-        champ = locked.get(cell)
+        champ = locked.get(cell) or (key_to_id.get(p.get("championId") or 0) if no_actions else None)
         hover = key_to_id.get(p.get("championPickIntent") or 0) or key_to_id.get(p.get("championId") or 0)
         allies.append({
             "cell": cell,

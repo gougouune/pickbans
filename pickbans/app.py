@@ -307,11 +307,11 @@ class App:
         if d["phase"] == "FINALIZATION":
             assessment = assess(self.engine, d, self.profile)
             me = next((a for a in d["allies"] if a["is_me"]), {})
-            if me.get("champ") and not self.demo_steps:
+            if me.get("champ") and not self.demo_steps and not recs.get("any_role"):
                 self.profile.log_game(d["game_id"], me["champ"], recs["role"], recs["opponent"])
         self.set(status="champ_select", in_select=True, draft=d, recs=recs, message="", live=None, assessment=assessment)
         if locked and locked != self.imported and self.settings.get("auto_runes"):
-            self.import_runes(locked, recs["role"])
+            self.import_runes(locked, recs.get("my_lane") or recs["role"])
 
     def on_game_end(self):
         """The game is over: show the post-match screen and analyse the game from the client's match history."""

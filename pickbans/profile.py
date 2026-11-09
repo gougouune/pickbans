@@ -37,18 +37,20 @@ class Profile:
             for g in games:
                 part = (g.get("participants") or [{}])[0]
                 cid = key_to_id.get(part.get("championId"))
-                if not cid or not _is_rift(g):
+                swift = g.get("gameMode") == "SWIFTPLAY" and g.get("mapId") in (None, 11)   # no lanes, but it IS what you play
+                if not cid or not (swift or _is_rift(g)):
                     continue  # ARAM & co say nothing about your lanes
                 stats = part.get("stats") or {}
                 won = bool(stats.get("win"))
                 role = _role_of(part.get("timeline") or {})
-                p.recent.append({"game_id": g.get("gameId"), "champ": cid, "win": won, "role": role,
-                                 "k": stats.get("kills", 0), "d": stats.get("deaths", 0), "a": stats.get("assists", 0),
-                                 "t": int((g.get("gameCreation") or 0) / 1000)})
+                if not swift:
+                    p.recent.append({"game_id": g.get("gameId"), "champ": cid, "win": won, "role": role,
+                                     "k": stats.get("kills", 0), "d": stats.get("deaths", 0), "a": stats.get("assists", 0),
+                                     "t": int((g.get("gameCreation") or 0) / 1000)})
                 rec = p.games.setdefault(cid, {"games": 0, "wins": 0, "roles": {}})
                 rec["games"] += 1
                 rec["wins"] += won
-                if role:
+                if role and not swift:
                     rec["roles"][role] = rec["roles"].get(role, 0) + 1
                     p.role_counts[role] = p.role_counts.get(role, 0) + 1
             p.recent.sort(key=lambda r: -r["t"])
