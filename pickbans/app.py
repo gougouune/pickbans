@@ -88,6 +88,7 @@ class App:
         self.state["marks"] = dict(marks.MARKS)
         self.state["last_game"] = _read_last_game()   # the last game's breakdown, even with League closed
         self.in_game = False
+        self.select_seen = False   # did this game go through a champ select we could read?
         self.game_started = None
         self.known_games = set()
         self.demo_post = False
@@ -190,6 +191,8 @@ class App:
                 self.in_game = True
                 self.game_started = time.time()
                 self.known_games = {r["game_id"] for r in self.profile.recent}  # so we can tell which game is the NEW one
+                log.info("game start: champ select seen=%s", self.select_seen)
+                self.log_queue("game start")
             self.tick_live(live.fetch())
             time.sleep(2)
         else:
@@ -267,6 +270,15 @@ class App:
         finally:
             self.profile_loading = False
 
+    def log_queue(self, where):
+        """Diagnostics only: which queue / mode we're in (Swiftplay, ARAM…), to understand modes we've never seen."""
+        try:
+            gs = (self.lcu.get("/lol-gameflow/v1/session") or {}) if self.lcu else {}
+            q = (gs.get("gameData") or {}).get("queue") or {}
+            log.info("%s: queue=%s mode=%s map=%s", where, q.get("id"), q.get("gameMode"), q.get("mapId"))
+        except Exception as e:
+            log.info("%s: queue unknown (%s)", where, e)
+
     def reset_game_state(self):
         """Forget everything about the previous game (in-game panel, runes, draft)."""
         self.tracker = None
@@ -277,9 +289,15 @@ class App:
     def on_session(self, s):
         d = parse_session(s, self.engine.key_to_id)
         gid = d.get("game_id") or "?"
+        self.select_seen = True
         if gid != self.cur_game:          # a NEW champ select: start clean
             self.cur_game = gid
             self.reset_game_state()
+            me0 = next((a for a in d["allies"] if a["is_me"]), {})
+            log.info("champ select shape: timer=%s actions=%d bans=%d team=%d my_role=%s my_champ=%s hover=%s", d["phase"],
+                     len(s.get("actions") or []), len(d["bans"]), len(d["allies"]), d["my_role"], me0.get("champ"), me0.get("hover"))
+            if not self.demo_steps:
+                self.log_queue("champ select")
         infer_roles(d["enemies"], self.engine.role_rate)
         self.last_draft = d
         self.last_session = s
@@ -302,6 +320,7 @@ class App:
         ctx = {"champ": me.get("champ"), "role": d.get("my_role") or self.profile.main_role(),
                "started": self.game_started, "known": set(self.known_games)}
         self.game_started = None
+        self.select_seen = False
         self.tracker = None
         self.imported = None
         self.last_draft = None
