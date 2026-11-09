@@ -19,6 +19,7 @@ class Profile:
         self.games = {}      # champ id -> {"games", "wins", "roles": {role: n}}
         self.role_counts = {}
         self.owned = None    # set of champ ids, None = unknown (assume all)
+        self.partial = False  # True when the client failed halfway (it's often not ready right after League opens)
         self.recent = []     # last Summoner's Rift games, newest first
         self.history = _load_history()
 
@@ -59,6 +60,7 @@ class Profile:
             if owned:
                 p.owned = {key_to_id[k] for k in owned if k in key_to_id}
         except Exception as e:
+            p.partial = True
             log.warning("profile load partial: %s", e)
         return p
 

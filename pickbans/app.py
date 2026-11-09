@@ -80,6 +80,7 @@ class App:
         self.demo_steps = None
         self.last_poll = 0.0
         self.profile_loading = False
+        self.profile_retry_at = 0.0
         self.tracker = None
         self.state = {"status": "starting", "seq": 0, "message": "Starting…", "version": __version__,
                       "patch": self.pack["version"], "meta_source": self.pack.get("meta_source", "baseline"),
@@ -173,7 +174,8 @@ class App:
             log.info("client gone")
             self.lcu = None
             return
-        if self.profile_stale and not self.profile_loading and phase not in IN_GAME and phase not in POST_GAME:
+        if (self.profile_stale and not self.profile_loading and phase not in IN_GAME and phase not in POST_GAME
+                and time.time() >= self.profile_retry_at):
             self.profile_stale = False
             self.profile_loading = True
             threading.Thread(target=self.load_profile, args=(self.lcu,), daemon=True).start()
@@ -250,6 +252,12 @@ class App:
         """Runs in the background — match history can take 10+ s on a slow client."""
         try:
             p = Profile.from_lcu(lcu, self.engine.key_to_id)
+            if p.partial:      # the client wasn't ready: try again shortly instead of staying empty until the next restart
+                self.profile_stale = True
+                self.profile_retry_at = time.time() + 15
+                log.info("profile incomplete: retrying in 15 s")
+                if self.profile.mastery or self.profile.recent:
+                    return     # keep what we already know
             if self.profile.owned and p.owned is None:
                 p.owned = self.profile.owned
             if not self.demo_steps:
