@@ -90,6 +90,7 @@ class App:
         self.state["last_game"] = _read_last_game()   # the last game's breakdown, even with League closed
         self.in_game = False
         self.select_seen = False   # did this game go through a champ select we could read?
+        self.game_mode = None
         self.game_started = None
         self.known_games = set()
         self.demo_post = False
@@ -183,6 +184,7 @@ class App:
             s = self.lcu.session()
             if s:
                 if not self.state.get("in_select"):
+                    self.cur_game = None      # a new champ select: start clean even if the client reuses the same gameId
                     pick = self.lcu.pickable_ids()
                     if pick:
                         self.profile.owned = {self.engine.key_to_id[k] for k in pick if k in self.engine.key_to_id}
@@ -194,7 +196,7 @@ class App:
                 self.game_started = time.time()
                 self.known_games = {r["game_id"] for r in self.profile.recent}  # so we can tell which game is the NEW one
                 log.info("game start: champ select seen=%s", self.select_seen)
-                self.log_queue("game start")
+                self.game_mode = self.log_queue("game start")
             self.tick_live(live.fetch())
             time.sleep(2)
         else:
@@ -284,8 +286,10 @@ class App:
             gs = (self.lcu.get("/lol-gameflow/v1/session") or {}) if self.lcu else {}
             q = (gs.get("gameData") or {}).get("queue") or {}
             log.info("%s: queue=%s mode=%s map=%s", where, q.get("id"), q.get("gameMode"), q.get("mapId"))
+            return q.get("gameMode")
         except Exception as e:
             log.info("%s: queue unknown (%s)", where, e)
+            return None
 
     def reset_game_state(self):
         """Forget everything about the previous game (in-game panel, runes, draft)."""
@@ -313,7 +317,7 @@ class App:
         recs = self.engine.recommend(d, self.profile, self.current_pool())
         assessment = None   # only exists once the draft is locked (never left over from an earlier game)
         if d["phase"] == "FINALIZATION":
-            assessment = assess(self.engine, d, self.profile)
+            assessment = assess(self.engine, d, self.profile, self.current_pool())
             me = next((a for a in d["allies"] if a["is_me"]), {})
             if me.get("champ") and not self.demo_steps and not recs.get("any_role"):
                 self.profile.log_game(d["game_id"], me["champ"], recs["role"], recs["opponent"])
@@ -325,14 +329,20 @@ class App:
         """The game is over: show the post-match screen and analyse the game from the client's match history."""
         d = self.last_draft or {}
         me = next((a for a in d.get("allies", []) if a["is_me"]), {})
+        mode = self.game_mode
         ctx = {"champ": me.get("champ"), "role": d.get("my_role") or self.profile.main_role(),
-               "started": self.game_started, "known": set(self.known_games)}
+               "started": self.game_started, "known": set(self.known_games), "mode": mode}
         self.game_started = None
+        self.game_mode = None
         self.select_seen = False
         self.tracker = None
         self.imported = None
         self.last_draft = None
         if not self.lcu:
+            return
+        if mode not in (None, "CLASSIC", "SWIFTPLAY"):   # practice tool, ARAM, custom...: nothing in the match history to analyse
+            log.info("game over (%s): no breakdown for this mode", mode)
+            self.set(status="idle", assessment=None, live=None, rune_import=None, in_select=False)
             return
         log.info("game over (%s): analysing", ctx["champ"])
         self.set(status="postgame", analyzing=True, assessment=None, live=None, rune_import=None, in_select=False)
@@ -340,6 +350,7 @@ class App:
 
     def run_breakdown(self, lcu, ctx):
         """Find the game that just finished in the match history (it can take a minute to show up) and analyse it."""
+        done = False
         try:
             game = None
             deadline = time.time() + 180
@@ -366,7 +377,8 @@ class App:
                 log.info("breakdown: no timeline (%s)", e)
             key = ((game.get("participants") or [{}])[0]).get("championId")
             champ = self.engine.key_to_id.get(key) or ctx["champ"]
-            b = breakdown.build(detail, timeline, key, champ, ctx["role"], self.profile.history, gid)
+            role = None if ctx.get("mode") == "SWIFTPLAY" else ctx["role"]   # no assigned lanes in Swiftplay
+            b = breakdown.build(detail, timeline, key, champ, role, self.profile.history, gid)
             frames = (timeline or {}).get("frames")
             log.info("breakdown %s: detail keys=%s timeline frames=%s -> %s", gid, sorted(detail)[:12],
                      len(frames) if isinstance(frames, list) else None, "ok" if b else "unreadable")
@@ -377,10 +389,13 @@ class App:
                 except OSError:
                     pass
                 self.set(last_game=b)
+                done = True
         except Exception:
             log.exception("breakdown failed")
         finally:
             self.set(analyzing=False)
+            if not done and self.state.get("status") == "postgame":   # nothing to show: back to the home screen
+                self.set(status="idle")
             self.profile_stale = True      # refresh your games so the new one joins the notebook and the trend
 
     def set_setting(self, key, value):
@@ -406,7 +421,7 @@ class App:
         threading.Thread(target=work, daemon=True).start()
 
     def show_assessment(self):
-        self.set(status="assessment", in_select=False, assessment=assess(self.engine, self.last_draft, self.profile))
+        self.set(status="assessment", in_select=False, assessment=assess(self.engine, self.last_draft, self.profile, self.current_pool()))
 
     def tick_live(self, data):
         """In game: keep the assessment up and refresh the live panel (clock, level 6 alerts, objectives)."""
@@ -432,7 +447,8 @@ class App:
         champ = me.get("champ") or me.get("hover")
         if not champ or champ not in self.engine.champs:
             return {}
-        role = d.get("my_role") or self.profile.main_role() or self.engine.champs[champ]["positions"][0]
+        role = (d.get("my_role") or poolmod.lane_of(self.current_pool(), champ) or self.profile.main_role()
+                or self.engine.champs[champ]["positions"][0])
         enemies = self.tracker.enemies_live(data)
         owned = self.tracker.my_items(data)
         items = self.engine.situational(champ, [e["champ"] for e in enemies], self.engine.build(champ, role),

@@ -434,7 +434,7 @@ function assessmentBody(a, live) {
   }
   h += `<div class="plan"><b>${esc(a.headline)}.</b> ${esc(a.plan)}</div>${tags ? `<div class="chips">${tags}</div>` : ""}`;
 
-  h += `<h2>Matchups <small>green = your side wins the lane · % = your side</small></h2>` + a.matchups.map(mrow).join("");
+  if (a.matchups.length) h += `<h2>Matchups <small>green = your side wins the lane · % = your side</small></h2>` + a.matchups.map(mrow).join("");
   const bot = a.matchups.find((m) => m.duo !== undefined);
   if (bot) {
     const v = bot.duo >= 0.2 ? ["good", "favored"] : bot.duo <= -0.2 ? ["bad", "tough"] : ["even", "even"];

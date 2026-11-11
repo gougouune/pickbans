@@ -8,11 +8,13 @@ from .pack import ROLES
 SCALE = {"E": 0, "M": 1, "L": 2}
 
 
-def assess(engine, draft, profile):
+def assess(engine, draft, profile, pool=None):
+    from . import pool as poolmod
     ch = engine.champs
-    role = draft.get("my_role") or profile.main_role() or "MIDDLE"
+    has_lanes = bool(draft.get("my_role"))      # Swiftplay & co: nobody has a lane
     me = next((a for a in draft["allies"] if a["is_me"]), {})
     mine = me.get("champ") or me.get("hover")
+    role = draft.get("my_role") or (poolmod.lane_of(pool, mine) if pool and mine else None) or profile.main_role() or "MIDDLE"
     allies = [a["champ"] for a in draft["allies"] if a["champ"]]
     enemies = [e["champ"] for e in draft["enemies"] if e["champ"]]
     at, et = engine.totals(allies), engine.totals(enemies)
@@ -67,7 +69,9 @@ def assess(engine, draft, profile):
             real = engine.pair(r, a, e)
             wr = round(real[0] * 100) if real else None
         matchups.append({"role": r, "ally": a, "enemy": e, "score": score, "wr": wr, "mine": r == role})
-    bot = _duo(engine, profile, ally_at, enemy_at)
+    if not has_lanes:
+        matchups = []
+    bot = _duo(engine, profile, ally_at, enemy_at) if has_lanes else None
     if bot is not None:
         for m in matchups:
             if m["role"] in ("BOTTOM", "UTILITY"):
@@ -75,7 +79,7 @@ def assess(engine, draft, profile):
 
     # ---- my lane ----
     lane = None
-    if mine:
+    if mine and has_lanes:
         opps = [enemy_at.get(r) for r in (("BOTTOM", "UTILITY") if role in ("BOTTOM", "UTILITY") else (role,))]
         opps = [o for o in opps if o]
         main_opp = enemy_at.get(role)

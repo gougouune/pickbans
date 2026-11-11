@@ -349,6 +349,8 @@ def refresh_tiers(pack, max_age_days=10):
     (Full matchup tables are ~270 calls, so those only come with a new data pack.)"""
     if time.time() - pack.get("stats_at", 0) < max_age_days * 86400:
         return pack, None
+    if pack.get("stats_rank") not in (None, "emerald_plus"):
+        return pack, None   # the live call only has the default bracket: keep the rank-specific numbers instead
     try:
         from . import opgg
         by_name = {norm(c["name"]): cid for cid, c in pack["champions"].items()}

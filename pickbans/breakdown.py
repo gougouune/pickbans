@@ -274,6 +274,8 @@ def build(detail, timeline, champ_key, champ_id, role, history, game_id=None):
         return None
     deaths, kills, wards = events_of(timeline, m["pid"])
     role = m.get("role") or role
+    if not role:        # modes without lanes (Swiftplay): benchmarks per role would be wrong, say nothing
+        return None
     out = analyze(m, role, history, deaths, wards)
     out.update({"game_id": game_id, "champ": champ_id, "win": m["win"], "dur": m["dur"], "k": m["k"], "d": m["d"], "a": m["a"],
                 "at": int(time.time())})

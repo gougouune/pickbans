@@ -107,3 +107,13 @@ def similarity(engine, cid, other):
     cos = dot / (na * nb) if na and nb else 0
     styles = set(engine.champs[cid]["styles"]) & set(engine.champs[other]["styles"])
     return min(1.0, cos * 0.8 + (0.2 if styles else 0))
+
+
+def lane_of(pool, cid):
+    """The lane you play this champion in (most games, then mastery), or None if it isn't in your pool."""
+    best = None
+    for role in ROLES:
+        for e in (pool or {}).get("roles", {}).get(role, []):
+            if e["id"] == cid and (best is None or (e["games"], e["mastery"]) > best[0]):
+                best = ((e["games"], e["mastery"]), role)
+    return best[1] if best else None
