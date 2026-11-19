@@ -1,3 +1,15 @@
+// Never stay a 1x1 / tiny window: if the window got shrunk to nothing, restore a usable size.
+function ensureWindowSize() {
+  try {
+    if (window.outerWidth < 300 || window.outerHeight < 400) {
+      window.resizeTo(520, 980);
+      window.moveTo(Math.max(0, (screen.availWidth - 520) / 2), 20);
+    }
+  } catch (e) {}
+}
+setInterval(ensureWindowSize, 2000);
+window.addEventListener("resize", ensureWindowSize);
+ensureWindowSize();
 let CH = {};
 let ITEMS = [];
 let lastSeq = -1;
@@ -355,7 +367,15 @@ function runesBlock(b) {
 
 function buildBlock(b) {
   const row = (label, items, after = "") => items.length ? `<div class="brow"><span class="blabel">${label}</span>${items.map(itemIcon).join("")}${after}</div>` : "";
-  return `<div class="build">${row("Start", b.start)}${row("Core", b.core)}${row("Boots", b.boots)}${row("Then", b.later)}</div>`;
+  const spells = (b.spells && b.spells.length) ? `<div class="brow"><span class="blabel">Spells</span>${b.spells.map((x) =>
+    `<img class="item spell" src="${x.img}" alt="${esc(x.name)}" title="${esc(x.name)}">`).join("")}<span class="muted" style="font-size:12px">${b.spells.map((x) => esc(x.name)).join(" + ")}</span></div>` : "";
+  return `<div class="build">${row("Start", b.start)}${row("Core", b.core)}${row("Boots", b.boots)}${row("Then", b.later)}${spells}</div>`;
+}
+
+function spellSwapsBlock(list) {
+  if (!list || !list.length) return "";
+  return `<div class="situ"><div class="situ-head">Summoners to consider</div>${list.map((x) =>
+    `<div class="situ-row"><img class="item spell" src="${x.img}" alt="${esc(x.name)}"><div><b>${esc(x.name)}</b><div class="muted">${esc(x.why)}</div></div></div>`).join("")}</div>`;
 }
 
 function situationalBlock(list, changed, now) {
@@ -429,6 +449,7 @@ function assessmentBody(a, live) {
     h += `<h2>Game plan <small>${nm(gp.champ)}</small></h2><div class="gameplan">
       ${b ? buildBlock(b) : `<div class="muted">No build known for this champion yet.</div>`}
       ${situationalBlock(sit, live && live.sit_changed, live && live.time)}
+      ${spellSwapsBlock(live && live.spell_swaps !== undefined ? live.spell_swaps : gp.spell_swaps)}
       ${b ? skillsBlock(b) : ""}
       ${gp.play ? `<div class="gp-tip">${esc(gp.play)}</div>` : ""}</div>`;
   }

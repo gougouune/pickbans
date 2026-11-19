@@ -110,8 +110,11 @@ def assess(engine, draft, profile, pool=None):
     gameplan = None
     if mine:
         build = engine.build(mine, role)
+        lane_opps = engine.lane_opponents(draft["enemies"], role) if has_lanes else []
         gameplan = {"champ": mine, "styles": ch[mine]["styles"], "play": ch[mine].get("play", ""), "build": build,
-                    "situational": engine.situational(mine, enemies, build)}
+                    "lane": lane_opps,
+                    "situational": engine.situational(mine, enemies, build, lane=lane_opps),
+                    "spell_swaps": engine.spell_swaps(mine, enemies, build, lane=lane_opps)}
 
     for c in enemies:  # champions you marked as "hate" go first
         if marks.get(c) == "hate":

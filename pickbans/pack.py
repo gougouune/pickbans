@@ -111,6 +111,7 @@ def build_pack(kb_dir):
     pack["items"] = build_items(kb_dir, version)
     pack["situational"] = build_situational(kb_dir, version)
     pack["item_info"] = build_item_info(version)
+    pack["spell_info"] = build_spell_info(version)
     pack["rune_icons"] = {str(r["id"]): r["icon"] for style in net.get_json(f"{DDRAGON}/cdn/{version}/data/en_US/runesReforged.json")
                           for slot in style["slots"] for r in slot["runes"]}
     stats_file = os.path.join(kb_dir, "stats.json")
@@ -150,6 +151,13 @@ def build_item_info(version):
             heal = (bool({"LifeSteal", "SpellVamp"} & set(tags)) and iid not in HEAL_NOT_REAL) or iid in HEAL_EXTRA
             out[iid] = {"tags": tags, "gold": gold, "heal": heal}
     return out
+
+
+def build_spell_info(version):
+    """{spell key: {name, img}} for the classic Summoner's Rift spells."""
+    data = net.get_json(f"{DDRAGON}/cdn/{version}/data/en_US/summoner.json")["data"]
+    return {str(sp["key"]): {"name": sp["name"], "img": sp["image"]["full"]}
+            for sp in data.values() if "CLASSIC" in (sp.get("modes") or [])}
 
 
 def build_situational(kb_dir, version):

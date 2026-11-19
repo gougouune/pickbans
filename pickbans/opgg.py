@@ -166,6 +166,7 @@ _RANK_FIELDS = [
     "data.fifth_items[].{ids[],ids_names[],play}",
     "data.skills.{order[],play}",
     "data.skill_masteries.{ids[],play}",
+    "data.summoner_spells.{ids[],play}",
 ]
 _POS_NAME = {"TOP": "TOP", "JUNGLE": "JUNGLE", "MIDDLE": "MID", "BOTTOM": "ADC", "UTILITY": "SUPPORT"}
 
@@ -194,6 +195,7 @@ def _build_of(data):
         "later": [_items(x)[0] for x in ((data.get("fourth_items") or [])[:2] + (data.get("fifth_items") or [])[:2]) if _items(x)],
         "skills": skills.get("order") or [],
         "prio": (data.get("skill_masteries") or {}).get("ids") or [],
+        "spells": [i for i in ((data.get("summoner_spells") or {}).get("ids") or []) if isinstance(i, int)][:2],
     }
 
 

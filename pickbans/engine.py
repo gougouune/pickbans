@@ -543,8 +543,12 @@ class Engine:
         icons = self.pack.get("rune_icons", {})
         item = lambda i: dict(i, img=f"{DDRAGON}/cdn/{v}/img/item/{i['id']}.png")
         r = b["runes"]
+        spell_info = self.pack.get("spell_info", {})
+        spells = [{"id": i, "name": spell_info[str(i)]["name"], "img": f"{DDRAGON}/cdn/{v}/img/spell/{spell_info[str(i)]['img']}"}
+                  for i in b.get("spells", []) if str(i) in spell_info]
         return {
             "role": used,
+            "spells": spells,
             "runes": dict(r, shown=[{"id": pid, "name": n, "img": f"{DDRAGON}/cdn/img/{icons[str(pid)]}" if str(pid) in icons else None}
                                     for pid, n in zip(r["perks"], r["names"])]),
             "start": [item(i) for i in b["start"]],
@@ -647,7 +651,61 @@ class Engine:
             out.append(("ap_heavy", [], f"their items are almost all AP ({ap} vs {ad})"))
         return out, known
 
-    def situational(self, cid, enemies, build=None, live=None, owned=()):
+    def lane_opponents(self, enemies, role):
+        """The enemies you actually fight in lane: your direct opponent, plus the other bot laner when you're bot or support."""
+        if not role:
+            return []
+        roles = {role} | ({"BOTTOM", "UTILITY"} if role in ("BOTTOM", "UTILITY") else set())
+        return [e["champ"] for e in enemies if e.get("champ") and e.get("role") in roles]
+
+    def lane_triggers(self, lane):
+        """What the people you lane against will do to you in the first 15 minutes: [(trigger, champions, why)]."""
+        lane = [c for c in (lane or []) if c in self.champs]
+        if not lane:
+            return []
+        names = " + ".join(self.champs[c]["name"] for c in lane)
+        kinds = [self.champs[c]["dmg"] for c in lane]
+        out = []
+        if all(k == "AP" for k in kinds):
+            out.append(("lane_ap", lane, f"your lane ({names}) deals magic damage"))
+        elif all(k == "AD" for k in kinds):
+            out.append(("lane_ad", lane, f"your lane ({names}) deals physical damage"))
+        if sum(self.t(c, "CC") for c in lane) >= 3:
+            out.append(("lane_cc", lane, f"your lane ({names}) has a lot of crowd control"))
+        if sum(self.t(c, "PO") for c in lane) >= 4:
+            out.append(("lane_poke", lane, f"your lane ({names}) will poke you a lot"))
+        return out
+
+    def _trigger_names(self, enemies, live, lane):
+        dynamic, known = self.live_triggers(live) if live else ([], False)
+        names = {t for t, _, _ in self.lane_triggers(lane)} | {t for t, _, _ in dynamic}
+        names |= {t for t, _ in self.enemy_triggers(enemies) if not (known and t in ("ad_heavy", "ap_heavy"))}
+        return names
+
+    SPELL_FOR = {"heal": (14, "they heal: Ignite cuts it", None),
+                 "cc": (1, "lots of crowd control: Cleanse breaks it", ("marksman", "mage", "assassin", "bruiser")),
+                 "lane_cc": (1, "your lane has lots of crowd control: Cleanse breaks it", ("marksman", "mage", "assassin", "bruiser")),
+                 "burst": (3, "burst champions: Exhaust shuts one down", ("marksman", "mage")),
+                 "dive": (3, "they dive: Exhaust shuts one down", ("marksman", "mage"))}
+
+    def spell_swaps(self, cid, enemies, build=None, live=None, lane=None):
+        """Summoner spells worth swapping in for THIS game (your usual pair comes from the build)."""
+        info = self.pack.get("spell_info", {})
+        if not info or cid not in self.champs:
+            return []
+        have = {s["id"] for s in (build or {}).get("spells", [])}
+        who, names, out, v = self.item_class(cid), self._trigger_names(enemies, live, lane), [], self.pack["version"]
+        for trig in ("heal", "cc", "lane_cc", "burst", "dive"):
+            if trig not in names:
+                continue
+            sid, why, classes = self.SPELL_FOR[trig]
+            if sid in have or any(x["id"] == sid for x in out) or str(sid) not in info or (classes and who not in classes):
+                continue
+            out.append({"id": sid, "name": info[str(sid)]["name"], "why": why,
+                        "img": f"{DDRAGON}/cdn/{v}/img/spell/{info[str(sid)]['img']}"})
+        return out[:2]
+
+    def situational(self, cid, enemies, build=None, live=None, owned=(), lane=None):
         """Items for THIS game, on top of the normal build. Max 4 + a control ward, one pair of boots.
         live = enemy items/kills right now (see live_triggers): checked first, and it overrides the champion-based guess."""
         table = self.pack.get("situational", {}).get("rows", [])
@@ -659,6 +717,9 @@ class Engine:
         owned_ids = {str(i) for i in owned}
         dynamic, known = self.live_triggers(live) if live else ([], False)
         triggers, why_live = [], {}
+        for trig, champs, why in self.lane_triggers(lane):    # the people you lane against come FIRST
+            why_live.setdefault(trig, why)
+            triggers.append((trig, champs))
         for trig, champs, why in dynamic:
             why_live.setdefault(trig, why)
             triggers.append((trig, champs))

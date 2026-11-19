@@ -451,8 +451,10 @@ class App:
                 or self.engine.champs[champ]["positions"][0])
         enemies = self.tracker.enemies_live(data)
         owned = self.tracker.my_items(data)
-        items = self.engine.situational(champ, [e["champ"] for e in enemies], self.engine.build(champ, role),
-                                        live=enemies, owned=owned)
+        build = self.engine.build(champ, role)
+        lane = self.engine.lane_opponents(d["enemies"], role) if d.get("my_role") else []
+        items = self.engine.situational(champ, [e["champ"] for e in enemies], build, live=enemies, owned=owned, lane=lane)
+        swaps = self.engine.spell_swaps(champ, [e["champ"] for e in enemies], build, live=enemies, lane=lane)
         ids = [x["id"] for x in items]
         t = self.tracker
         if t.sit_ids is None:   # first look: say what the live data gave us, to check it against the real client
@@ -463,7 +465,7 @@ class App:
                 t.sit_changed = {"clock": lv["clock"], "time": lv["time"],
                                  "text": ", ".join(x["name"] for x in new[:2]) + (f" — {new[0]['live']}" if new[0].get("live") else "")}
         t.sit_ids = ids
-        return {"situational": items, "owned": sorted(set(owned)), "sit_changed": t.sit_changed}
+        return {"situational": items, "spell_swaps": swaps, "owned": sorted(set(owned)), "sit_changed": t.sit_changed}
 
     # ---------- demo ----------
     def start_demo(self):
@@ -635,6 +637,51 @@ def start_server(port=None):
             continue
 
 
+MIN_W, MIN_H = 300, 400
+
+
+def _sanitize_window_placement(profile_dir):
+    """Edge remembers the app window's size/position in its profile. If it ever saved a tiny
+    (e.g. 1x1 pixel, after a minimize or a fullscreen game) or degenerate rect, the next launch
+    opens an invisible window. Drop any such saved rect so Edge falls back to --window-size."""
+    path = os.path.join(profile_dir, "Default", "Preferences")
+    try:
+        with open(path, "r", encoding="utf-8") as f:
+            prefs = json.load(f)
+    except Exception:
+        return
+    changed = False
+
+    def bad(d):
+        try:
+            return (d["right"] - d["left"] < MIN_W or d["bottom"] - d["top"] < MIN_H) and not d.get("maximized")
+        except Exception:
+            return False
+
+    def walk(node):
+        nonlocal changed
+        if isinstance(node, dict):
+            for k in list(node):
+                v = node[k]
+                if isinstance(v, dict) and {"left", "right", "top", "bottom"} <= set(v) and bad(v):
+                    del node[k]
+                    changed = True
+                else:
+                    walk(v)
+        elif isinstance(node, list):
+            for v in node:
+                walk(v)
+
+    walk(prefs)
+    if changed:
+        try:
+            with open(path, "w", encoding="utf-8") as f:
+                json.dump(prefs, f, separators=(",", ":"))
+            log.info("reset a degenerate saved window size")
+        except Exception:
+            pass
+
+
 def open_window(url):
     """A clean app-style window via Edge (always on Windows 10/11); fallback to the default browser."""
     candidates = [
@@ -645,6 +692,7 @@ def open_window(url):
     edge = next((c for c in candidates if c and os.path.exists(c)), None)
     if edge:
         profile_dir = os.path.join(paths.USER_DIR, "window")
+        _sanitize_window_placement(profile_dir)
         # keep polling at full speed even when minimized / behind League
         subprocess.Popen([edge, f"--app={url}", "--window-size=520,980", f"--user-data-dir={profile_dir}",
                           "--no-first-run", "--no-default-browser-check", "--disable-features=Translate",

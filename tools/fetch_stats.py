@@ -26,6 +26,11 @@ by_name = {norm(c["name"]): cid for cid, c in roster.items()}
 by_name.update({norm(cid): cid for cid in roster})
 key_to_id = {c["key"]: cid for cid, c in roster.items()}
 
+def _needs_build(b):
+    """A champion/lane build is (re)fetched when it was never fetched, or predates a field we now need (summoner spells)."""
+    return b == "missing" or (isinstance(b, dict) and "spells" not in b)
+
+
 old = {}
 PREV = None
 FILL_ONLY = False
@@ -48,7 +53,7 @@ if "--max-age-days" in sys.argv and old:
     age = (time.time() - old.get("fetched_at", 0)) / 86400
     missing = [(r, c) for r, lane in old.get("meta", {}).items() for c in lane
                if c not in old.get("matchups", {}).get(r, {}) or c not in old.get("rank_done", {}).get(r, [])
-               or c not in old.get("builds", {}).get(r, {})]
+               or _needs_build(old.get("builds", {}).get(r, {}).get(c, "missing"))]
     if age < days and not missing:
         print(f"Stats are {age:.1f} days old (< {days}) for patch {version}: nothing to do")
         sys.exit(0)
@@ -97,7 +102,7 @@ rank_done = old.get("rank_done", {}) if FILL_ONLY else {}
 builds = old.get("builds", {}) if FILL_ONLY else {}
 rank_meta = json.loads(json.dumps(old["meta"])) if FILL_ONLY else json.loads(json.dumps(base_meta))
 jobs2 = [(role, cid) for role, champs in base_meta.items() for cid in champs
-         if cid not in rank_done.get(role, []) or cid not in builds.get(role, {})]
+         if cid not in rank_done.get(role, []) or _needs_build(builds.get(role, {}).get(cid, "missing"))]
 print(f"Rank '{RANK}': {len(jobs2)} champion/lane stats to fetch")
 
 

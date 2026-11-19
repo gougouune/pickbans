@@ -45,3 +45,9 @@ armor_stack | assassin | 6694 | Serylda's Grudge | their armor is stacking: armo
 armor_stack | bruiser | 3071 | Black Cleaver | shreds their stacked armor
 mr_stack | mage | 3135 | Void Staff | their magic resist is stacking: magic penetration
 mr_stack | mage | 8010 | Bloodletter's Curse | shreds their stacked magic resist
+lane_ap | all | 3111 | Mercury's Treads | boots: the people you lane against deal magic damage
+lane_ap | marksman, assassin, bruiser | 3156 | Maw of Malmortius | magic resist + a shield against their burst
+lane_ap | marksman | 3091 | Wit's End | magic resist while still doing damage
+lane_ad | all | 3047 | Plated Steelcaps | boots: the people you lane against deal physical damage
+lane_cc | all | 3111 | Mercury's Treads | boots: your lane has a lot of crowd control (stuns, fears, roots)
+lane_poke | marksman, bruiser | 1053 | Vampiric Scepter | sustain in a poke lane (heals on minions too): only worth it if you're building toward Bloodthirster

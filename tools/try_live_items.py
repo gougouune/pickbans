@@ -56,4 +56,27 @@ print("   ad_heavy dropped once items say AP:", not any(x["trigger"] == "ad_heav
 o = show("6) Naafiri already owns Chempunk Chainsword", "Naafiri", TEAM, later, owned=["6609"])
 assert not any(x["id"] == "6609" for x in o)
 
+# 7) lane opponents decide boots / summoners (Yunara bot vs Aurelion Sol + Fiddlesticks)
+def P(champ, role):
+    return {"champ": champ, "role": role, "is_me": False}
+
+
+draft_en = [P("AurelionSol", "BOTTOM"), P("Fiddlesticks", "UTILITY"), P("Zed", "MIDDLE"), P("Vi", "JUNGLE"), P("Darius", "TOP")]
+lane = e.lane_opponents(draft_en, "BOTTOM")
+print("\n7) lane opponents:", lane)
+assert set(lane) == {"AurelionSol", "Fiddlesticks"}, lane
+en = [x["champ"] for x in draft_en]
+b = e.build("Yunara", "BOTTOM")
+sit = e.situational("Yunara", en, b, lane=lane)
+for x in sit:
+    print("   -", x["name"], "|", x.get("live") or x.get("why"))
+assert "Mercury" in sit[0]["name"], sit[0]["name"]
+sw = e.spell_swaps("Yunara", en, b, lane=lane)
+print("   spells:", [x["name"] for x in sw])
+assert any(x["name"] == "Cleanse" for x in sw)
+ad = [P("Draven", "BOTTOM"), P("Pyke", "UTILITY"), P("Zed", "MIDDLE"), P("Vi", "JUNGLE"), P("Darius", "TOP")]
+sit2 = e.situational("Yunara", [x["champ"] for x in ad], b, lane=e.lane_opponents(ad, "BOTTOM"))
+print("   vs Draven+Pyke first item:", sit2[0]["name"])
+assert "Steelcaps" in sit2[0]["name"], sit2[0]["name"]
+
 print("\nAll good.")
